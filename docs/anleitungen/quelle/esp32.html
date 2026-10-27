@@ -173,7 +173,7 @@ ota_pw: "eigenes Update-Passwort"
 mqtt_host: "IP der Zentrale"
 mqtt_user: "heimalarm"
 mqtt_pw: "dein MQTT_PASSWORD"</pre>
-      <span class="note"><span class="btn">Save</span>. Die Vorlage dafür ist <code>secrets.example.yaml</code>.</span></div></li>
+      <span class="note"><span class="btn">Save</span>. Die Vorlage dafür ist <code>secrets.example.yaml</code>. Sicherer: eigenes Konto nur für den Melder (<code>MQTT_ESP_PASSWORD</code> in der <code>.env</code>, hier <code>mqtt_user: "heimalarm-esp"</code>), siehe Heimalarm-Update.pdf.</span></div></li>
     <li><div><b>Nur dein Board behalten:</b> ESPHome zeigt drei Karten, alle heißen <code>alarm-ich</code>. Unter dem Namen steht die Datei – die zu deinem Board (Tabelle Schritt 1) behalten, bei den anderen beiden ⋮ → <span class="btn">Löschen</span>.<span class="note">Sie heißen gleich wie dein ESP32. Wer aus Versehen die falsche aufspielt, legt den Melder lahm und muss ihn per Kabel neu flashen.</span></div></li>
     <li><div>Bei deiner Karte auf <span class="btn">Bearbeiten</span>. Ganz oben steht <code>kennung: ich</code>. Für dich passt <code>ich</code> – bei weiteren Personen eine eigene Kennung wählen, z. B. <code>kollege</code>. <span class="btn">Save</span>.</div></li>
   </ol>

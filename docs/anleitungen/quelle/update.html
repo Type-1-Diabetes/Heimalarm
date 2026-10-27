@@ -73,6 +73,22 @@ docker compose up -d --build</pre><span class="note"><code>cp</code> holt die ne
   <div class="done"><div><b>Geklappt, wenn</b> im Protokoll „Connected“ und „Boot seems successful“ stehen. Die LED pulsiert kurz blau, leuchtet 3 s grün und geht aus. In der App <span class="path">Einstellungen <i>›</i> Melder (ESP32) <i>›</i> LED am ESP32</span> steht „Farbige LED erkannt“.</div></div>
 </section>
 
+<section class="page" data-title="Heimalarm aktualisieren" id="konto">
+  <div class="head"><span class="ico big" style="--a:var(--c-alarm)">{{i:lock}}</span><h2>Optional · Eigenes Konto für den Melder</h2><span class="dur">10 min</span></div>
+  <p>Bisher meldet sich der ESP32 mit demselben Konto an wie App und Zentrale. Wer dieses Passwort aus dem Melder ausliest, könnte alles steuern. Mit einem eigenen Konto darf der Melder nur Alarme melden und keine Firmware-Updates auslösen. Ohne diesen Schritt läuft alles weiter wie bisher.</p>
+  <ol class="steps" style="--a:var(--c-alarm)">
+    <li><div><b>Neues Passwort ausdenken:</b> lang, <b>nur Buchstaben und Ziffern</b>, z. B. 25 Zeichen.<span class="note">Kein <code>$</code>: Docker liest <code>$</code> in der <code>.env</code> als Platzhalter, die Zentrale speichert dann ein anderes Passwort.</span></div></li>
+    <li><div><b><code>.env</code> der Zentrale</b> öffnen (NAS: <span class="path">Dateien <i>›</i> docker <i>›</i> heimalarm</span>, Pi: <code>nano ~/Heimalarm/zentrale/.env</code>) und <b>unten eine neue Zeile</b> anfügen:
+      <pre class="code">MQTT_ESP_PASSWORD=dein-neues-passwort</pre><span class="note"><code>MQTT_USER=heimalarm</code> und <code>MQTT_PASSWORD</code> bleiben <b>unverändert</b> – das ist weiter das Konto für App und Zentrale.</span></div></li>
+    <li><div><b>Zentrale neu starten:</b> NAS: <span class="path">Projekte <i>›</i> heimalarm</span> → <span class="btn">Neu bereitstellen</span>. Pi: <code>cd ~/Heimalarm/zentrale &amp;&amp; docker compose up -d</code></div></li>
+    <li><div><b><code>secrets.yaml</code></b> (NAS: <code>docker/heimalarm/esp32</code>, Pi: <code>zentrale/esp32</code>) – nur diese zwei Zeilen ändern, nicht doppelt eintragen:
+      <pre class="code">mqtt_user: "heimalarm-esp"
+mqtt_pw: "dein-neues-passwort"</pre></div></li>
+    <li><div><b>ESP32 neu aufspielen</b> wie in Schritt 3 (<span class="btn">Installieren</span> → <span class="btn">Im Netzwerk</span>).</div></li>
+  </ol>
+  <div class="done"><div><b>Geklappt, wenn</b> auf Start „Alle Verbindungen ok“ und „ESP32 online“ stehen und der <span class="path">Kontakt-Test</span> auf „geschlossen“ springt. In der App selbst ändert sich nichts.</div></div>
+</section>
+
 <section class="page" data-title="Heimalarm aktualisieren" id="fehler">
   <div class="head"><span class="ico big" style="--a:var(--warn)">{{i:warn}}</span><h2>Wenn etwas nicht klappt</h2></div>
   <div class="box"><table class="t">
@@ -84,6 +100,10 @@ docker compose up -d --build</pre><span class="note"><code>cp</code> holt die ne
     <tr><td>Validieren: „Could not find file led/…“</td><td class="muted">Ordner <code>esp32/led</code> fehlt. Ganzen Ordner <code>esp32</code> hochladen, <code>secrets.yaml</code> nicht überschreiben.</td></tr>
     <tr><td>Im Netzwerk: „Host not found“</td><td class="muted"><span class="btn">Installieren</span> → <span class="btn">Erweiterte Optionen</span> → <span class="btn">Geräte-IP</span>, IP des ESP32 eintragen (App, Start → ESP32, oder Router).</td></tr>
     <tr><td>Pi: App zeigt „ältere Firmware“, obwohl gerade geflasht</td><td class="muted">ESPHome hat die alte Kopie in <code>zentrale/esp32</code> gebaut. <code>cp -r ../esp32/* esp32/</code>, Kennung prüfen, neu aufspielen.</td></tr>
+    <tr><td>„Benutzer oder Passwort falsch“ nach Passwortänderung in der <code>.env</code></td><td class="muted">Ältere <code>docker-compose.yml</code> übernimmt neue Passwörter nicht (Protokoll von <code>mosquitto</code>: „File exists“). Neue Datei hochladen, <b>ersetzen</b>, <span class="btn">Neu bereitstellen</span>. Danach in jeder App das <code>MQTT_PASSWORD</code> eintragen.</td></tr>
+    <tr><td><code>mosquitto</code> startet nicht: „MQTT_USER und MQTT_ESP_USER sind gleich“</td><td class="muted">In der <code>.env</code> muss <code>MQTT_USER=heimalarm</code> stehen. <code>heimalarm-esp</code> gehört nur in <code>secrets.yaml</code>.</td></tr>
+    <tr><td>Melder offline nach eigenem Konto</td><td class="muted">Passwort in <code>.env</code> (<code>MQTT_ESP_PASSWORD</code>) und <code>secrets.yaml</code> (<code>mqtt_pw</code>) genau gleich? Kein <code>$</code> darin? Zentrale danach neu bereitgestellt?</td></tr>
+    <tr><td>NAS: <code>docker-compose.yml</code> und <code>.yaml</code></td><td class="muted">Die mit <code>.yaml</code> löschen. Docker nimmt sonst eine beliebige.</td></tr>
     <tr><td>Log: „mqtt took a long time“</td><td class="muted">Harmlos, kommt kurz nach dem Neustart.</td></tr>
     <tr><td>Protokoll: „Alter Alarm aus der Verbindungslücke – nicht ausgelöst“</td><td class="muted">Normal, einmal nach dem ersten Verbinden.</td></tr>
     <tr><td>LED bleibt dunkel</td><td class="muted">In <code>alarm-ich-s3.yaml</code> <code>led/rgb-gpio48.yaml</code> in <code>led/rgb-gpio38.yaml</code> ändern, neu aufspielen.</td></tr>

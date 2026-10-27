@@ -21,15 +21,23 @@ services:
     environment:
       MQTT_USER: ${MQTT_USER:-heimalarm}
       MQTT_PASSWORD: ${MQTT_PASSWORD:-}
-    # Passwortdatei aus .env erzeugen, dann Mosquitto starten
+      MQTT_ESP_USER: ${MQTT_ESP_USER:-heimalarm-esp}
+      MQTT_ESP_PASSWORD: ${MQTT_ESP_PASSWORD:-}
+    # Passwort- und Rechtedatei aus .env erzeugen, dann Mosquitto starten.
+    # Hauptkonto: alles. Optionales ESP32-Konto: nur alarm/… und keine Firmware-Updates (alarm/+/ota) für andere.
     entrypoint:
       - sh
       - -c
       - |
         if [ -z "$$MQTT_PASSWORD" ]; then echo "Heimalarm: MQTT_PASSWORD fehlt in zentrale/.env – siehe .env.example" >&2; exit 1; fi
         mosquitto_passwd -c -b /mosquitto/data/passwd "$$MQTT_USER" "$$MQTT_PASSWORD"
-        chown mosquitto:mosquitto /mosquitto/data/passwd
-        chmod 0700 /mosquitto/data/passwd
+        printf 'user %s\ntopic readwrite #\n' "$$MQTT_USER" > /mosquitto/data/acl
+        if [ -n "$$MQTT_ESP_PASSWORD" ]; then
+          mosquitto_passwd -b /mosquitto/data/passwd "$$MQTT_ESP_USER" "$$MQTT_ESP_PASSWORD"
+          printf '\nuser %s\ntopic read alarm/#\ntopic write alarm/+\ntopic write alarm/+/status\ntopic write alarm/+/debug\ntopic write alarm/+/+/+/state\ntopic readwrite homeassistant/#\n' "$$MQTT_ESP_USER" >> /mosquitto/data/acl
+        fi
+        chown mosquitto:mosquitto /mosquitto/data/passwd /mosquitto/data/acl
+        chmod 0700 /mosquitto/data/passwd /mosquitto/data/acl
         exec mosquitto -c /mosquitto/config/mosquitto.conf
 
   dienst:
@@ -67,6 +75,7 @@ services:
       ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_PASSWORD:-}
       ZIGBEE2MQTT_CONFIG_SERIAL_PORT: /dev/ttyACM0
       ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED: "true"
+      ZIGBEE2MQTT_CONFIG_FRONTEND_AUTH_TOKEN: ${MQTT_PASSWORD:-}   # Weboberfläche nur mit dem Zentralen-Passwort
       ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED: "false"
 
   # Gibt Zigbee-Lichter und -Gruppen per Matter an Alexa / Google Home weiter (lokal).

@@ -14,7 +14,13 @@ const lockedOut = (ip) => {
   if (Date.now() - f.at > LOCK_MS) { fails.delete(ip); return false; }
   return f.n >= MAX_FAILS;
 };
-const recordFail = (ip) => { const f = fails.get(ip) || { n: 0, at: 0 }; fails.set(ip, { n: f.n + 1, at: Date.now() }); };
+const recordFail = (ip) => {
+  if (fails.size > 1000) for (const [k, f] of fails) if (Date.now() - f.at > LOCK_MS) fails.delete(k);   // alte Sperren aufräumen
+  const f = fails.get(ip) || { n: 0, at: 0 };
+  fails.set(ip, { n: f.n + 1, at: Date.now() });
+};
+/** Kennung wie in der App (core/kennung.js): sonst könnte „/“, „+“ oder „#“ fremde Topics treffen (z. B. alarm/x/ota). */
+const KENNUNG = /^[a-z0-9-]{1,32}$/iu;
 /** Vergleich in fester Zeit (über Hashes, damit auch die Länge nichts verrät). */
 const sameSecret = (a, b) => timingSafeEqual(createHash("sha256").update(String(a)).digest(), createHash("sha256").update(String(b)).digest());
 
@@ -36,7 +42,8 @@ export function startWebhook(ctx, log) {
     req.on("end", () => {
       let json = {};
       try { json = body ? JSON.parse(body) : {}; } catch { /* kein JSON */ }
-      const who = url.searchParams.get("who") || json.who || ctx.config.persons?.[0]?.id || "ich";
+      const who = String(url.searchParams.get("who") || json.who || ctx.config.persons?.[0]?.id || "ich");
+      if (!KENNUNG.test(who)) return end(res, 400, "ungültige Kennung (nur a–z, 0–9 und -)");
       const payload = {
         source: "Webhook",
         keyword: url.searchParams.get("keyword") || json.keyword || "",

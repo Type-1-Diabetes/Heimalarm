@@ -46,9 +46,19 @@ mqtt:
     # A10 – App sendet "<url>|<md5>" an alarm/<kennung>/ota
     - topic: alarm/${kennung}/ota
       then:
-        - ota.http_request.flash:
-            url: !lambda 'return x.substr(0, x.find("|"));'
-            md5: !lambda 'return x.substr(x.find("|") + 1);'
+        # Nur "<http(s)-Adresse>|<32-stellige MD5>" annehmen, alles andere verwerfen
+        - if:
+            condition:
+              lambda: |-
+                size_t p = x.find("|");
+                if (p == std::string::npos || x.size() - p - 1 != 32) return false;
+                if (x.rfind("http://", 0) != 0 && x.rfind("https://", 0) != 0) return false;
+                for (size_t i = p + 1; i < x.size(); i++) if (!isxdigit((unsigned char) x[i])) return false;
+                return true;
+            then:
+              - ota.http_request.flash:
+                  url: !lambda 'return x.substr(0, x.find("|"));'
+                  md5: !lambda 'return x.substr(x.find("|") + 1);'
 
 # A3 – Mindestdauer des Kontakts, aus der App einstellbar (alarm/<kennung>/number/min_duration/command)
 number:

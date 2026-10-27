@@ -12,7 +12,7 @@ import { startHass } from "./hass.js";
 import { startDivera } from "./divera.js";
 import { startMatterCtl } from "./matterctl.js";
 
-export const VERSION = "0.2.9";
+export const VERSION = "0.2.10";
 const URL = process.env.MQTT_URL || "mqtt://mosquitto:1883";
 
 const client = mqtt.connect(URL, {

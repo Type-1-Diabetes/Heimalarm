@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{IpAddr, TcpListener, TcpStream, UdpSocket};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
@@ -99,6 +100,11 @@ fn reply(stream: &mut TcpStream, code: &str, body: &str) {
 // Nach MAX_FAILS falschen Codes von einer Adresse ist sie für LOCK gesperrt.
 // Koppeln (POST /pair) geht nur, solange am PC „Koppeln erlauben“ läuft.
 const MAX_FAILS: u32 = 10;
+/// Größter Body eines gekoppelten Handys (Einstellungen mit Logbuch und Protokollen).
+const BODY_MAX: usize = 8_388_608;
+/// Gleichzeitige Verbindungen (wartende /events-Abfragen eingeschlossen).
+const MAX_CONN: usize = 64;
+static CONN: AtomicUsize = AtomicUsize::new(0);
 const LOCK: Duration = Duration::from_secs(300);
 static FAILS: OnceLock<Mutex<HashMap<IpAddr, (u32, Instant)>>> = OnceLock::new();
 static PAIR_UNTIL: OnceLock<Mutex<Option<Instant>>> = OnceLock::new();
@@ -128,6 +134,7 @@ fn same(a: &str, b: &str) -> bool {
 }
 fn record_fail(ip: IpAddr) {
     if let Ok(mut f) = fails().lock() {
+        if f.len() > 1_000 { f.retain(|_, (_, since)| since.elapsed() <= LOCK); }
         let e = f.entry(ip).or_insert((0, Instant::now()));
         e.0 += 1;
         e.1 = Instant::now();
@@ -162,14 +169,17 @@ fn handle(app: &AppHandle, mut stream: TcpStream) {
         }
         let lower = h.to_ascii_lowercase();
         if let Some(v) = lower.strip_prefix("content-length:") {
-            len = v.trim().parse().unwrap_or(0).min(8_388_608);
+            len = v.trim().parse().unwrap_or(0).min(BODY_MAX);
         } else if lower.starts_with("x-heimalarm-key:") {
             got_key = h[16..].trim().to_string();
         }
     }
-    let mut body = vec![0u8; len];
-    let _ = reader.read_exact(&mut body);
-    let body = String::from_utf8_lossy(&body).to_string();
+    // Den Body erst lesen, wenn der Schlüssel stimmt (sonst könnte jeder im WLAN bis zu 8 MB schicken).
+    let read_body = |reader: &mut BufReader<TcpStream>, max: usize| -> String {
+        let mut body = vec![0u8; len.min(max)];
+        let _ = reader.read_exact(&mut body);
+        String::from_utf8_lossy(&body).to_string()
+    };
 
     // aPager-PRO-Webhook direkt an diesen PC: /apager/<schlüssel>?keyword=..&unit=..[&event=recall|clear]
     // (aPager auf dem Handy ruft die Adresse selbst auf – geht ohne Zentrale, solange das Handy im WLAN ist)
@@ -178,8 +188,10 @@ fn handle(app: &AppHandle, mut stream: TcpStream) {
         let hook = keys().lock().map(|k| k.hook.clone()).unwrap_or_default();
         if hook.is_empty() || !same(key, &hook) {
             record_fail(ip);
+            let _ = read_body(&mut reader, 4_096);   // kleinen Rest lesen, damit die Antwort ankommt
             return reply(&mut stream, "403 Forbidden", r#"{"ok":false,"error":"Schlüssel falsch"}"#);
         }
+        let body = read_body(&mut reader, 100_000);
         let _ = app.emit("direct-webhook", format!("{query}\n{body}"));
         return reply(&mut stream, "200 OK", r#"{"ok":true}"#);
     }
@@ -195,11 +207,14 @@ fn handle(app: &AppHandle, mut stream: TcpStream) {
     };
     if !pairing && !phone {
         record_fail(ip);
+        let _ = read_body(&mut reader, 4_096);
         return reply(&mut stream, "403 Forbidden", r#"{"ok":false,"error":"Code falsch"}"#);
     }
     if phone {
         let _ = app.emit("direct-seen", got_key.clone());
     }
+    // Koppeln schickt nur Name und ID; gekoppelte Handys dürfen große Einstellungen (Logbuch, Protokolle) senden.
+    let body = read_body(&mut reader, if phone { BODY_MAX } else { 4_096 });
     match (method, path) {
         ("GET", "/ping") => reply(
             &mut stream,
@@ -214,7 +229,11 @@ fn handle(app: &AppHandle, mut stream: TcpStream) {
             if let Ok(mut k) = keys().lock() {
                 k.phones.push(code.clone());
             }
-            let _ = app.emit("direct-pair", format!(r#"{{"code":"{code}","info":{}}}"#, if body.trim().starts_with('{') { body.trim() } else { "{}" }));
+            // Nur id und name übernehmen (gekürzt), statt den Body ungeprüft ins Ereignis zu kopieren
+            let info: serde_json::Value = serde_json::from_str(&body).unwrap_or_default();
+            let field = |k: &str| info.get(k).and_then(|v| v.as_str()).map(|v| v.chars().take(64).collect::<String>());
+            let event = serde_json::json!({ "code": code, "info": { "id": field("id"), "name": field("name") } });
+            let _ = app.emit("direct-pair", event.to_string());
             reply(&mut stream, "200 OK", &format!(r#"{{"ok":true,"code":"{code}","name":"{}"}}"#, esc(&name)));
         }
         ("POST", "/alarm") if phone => {
@@ -256,8 +275,15 @@ pub fn direct_server(app: AppHandle, port: u16, code: String, phones: Option<Vec
         let _ = STARTED.set(port);
         std::thread::spawn(move || {
             for stream in listener.incoming().flatten() {
+                if CONN.fetch_add(1, Ordering::SeqCst) >= MAX_CONN {
+                    CONN.fetch_sub(1, Ordering::SeqCst);
+                    continue;   // zu viele offene Verbindungen: diese sofort schließen
+                }
                 let app = app.clone();
-                std::thread::spawn(move || handle(&app, stream));
+                std::thread::spawn(move || {
+                    handle(&app, stream);
+                    CONN.fetch_sub(1, Ordering::SeqCst);
+                });
             }
         });
     }

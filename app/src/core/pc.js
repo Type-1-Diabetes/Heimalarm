@@ -6,7 +6,7 @@ export const ACTIONS = {
   sleep: { label: "Energiesparen", hint: "Schnell wieder da, braucht weiter etwas Strom." },
   lock: { label: "Nur sperren", hint: "PC läuft weiter, Bildschirm gesperrt." },
   shutdown: { label: "Herunterfahren", hint: "Kann an „Speichern?“-Dialogen hängen bleiben." },
-  mixed: { label: "Mischform", hint: "Herunterfahren, nach 2 min sonst Ruhezustand." },
+  mixed: { label: "Mischform", hint: "Fährt herunter. Hängt es länger als 2 min, Ruhezustand." },
   none: { label: "Nichts tun", hint: "Nur Abfrage und Protokoll." },
 };
 

@@ -84,7 +84,7 @@ function guide(key, rerender) {
     case "zentrale": return {
       lead: "Die Zentrale läuft in Docker auf deinem Gerät, das immer an ist.",
       steps: steps("Ordner <code>zentrale</code> aus dem Repository auf das Gerät kopieren, dazu den Ordner <code>esp32</code>.",
-        ["Raspberry Pi: <code>docker compose up -d</code> ausführen. Nach jedem <code>git pull</code> auch <code>cp -r ../esp32/* esp32/</code>, sonst baut ESPHome die alte Firmware. UGREEN-NAS: in der Docker-App Projekt <code>heimalarm</code> erstellen und bereitstellen.", "docker"],
+        ["<b>Raspberry Pi:</b> 1. <code>docker compose up -d</code> ausführen. 2. Nach jedem <code>git pull</code> auch <code>cp -r ../esp32/* esp32/</code> (sonst baut ESPHome die alte Firmware).<br><b>UGREEN-NAS:</b> In der Docker-App Projekt <code>heimalarm</code> erstellen und bereitstellen.", "docker"],
         "Mit Zigbee-Stick zusätzlich <code>--profile zigbee</code>. Auf der NAS für ESPHome in <code>docker-compose.yml</code> die Zeile <code>profiles: [\"esphome\"]</code> löschen – die Docker-App beachtet Profile aus <code>.env</code> nicht.",
         "Im WLAN-Router dem Gerät eine feste IP-Adresse geben und sie notieren, z. B. <code>192.168.178.5</code>."),
       body: [row(manual(key, rerender, "Zentrale läuft"))], ok: "Zentrale läuft",
@@ -132,10 +132,10 @@ function guide(key, rerender) {
     };
     case "divera": return {
       lead: "Dein persönlicher Schlüssel. Er bleibt nur auf diesem Gerät.",
-      steps: steps("Divera im Browser öffnen und anmelden.", ["Einstellungen → Debug öffnen und den Accesskey kopieren.", "divera"], "Hier einfügen und „Prüfen“ drücken."),
+      steps: steps("Divera im Browser öffnen und anmelden.", ["Einstellungen → Debug öffnen und den Accesskey (Divera-Schlüssel) kopieren.", "divera"], "Hier einfügen und „Prüfen“ drücken."),
       body: (() => {
         const keyField = input(s.divera.key, (v) => set("divera.key", v), { type: "password", placeholder: "Accesskey" });
-        return [field("Accesskey", keyField), row(btn("Prüfen", async () => {
+        return [field("Divera-Schlüssel", keyField), row(btn("Prüfen", async () => {
           set("divera.key", keyField.value.trim());
           try { const r = await loadDivera(); toast(`Einheit „${r.unit || "?"}“ gefunden`); }
           catch (e) { toast(`Divera: ${e.message || "Schlüssel ungültig"}`); }
@@ -151,9 +151,9 @@ function guide(key, rerender) {
         field("Countdown", h("select.select", { onchange: (e) => { set("pc.countdownSec", Number(e.target.value)); wz.markOk(key); rerender(); } },
           [15, 30, 60, 120].map((v) => h("option", { value: v, selected: s.pc.countdownSec === v }, `${v} Sekunden`)))),
         field("Danach", h("select.select", { onchange: (e) => { set("pc.action", e.target.value); wz.markOk(key); rerender(); } },
-          [["hibernate", "Ruhezustand"], ["sleep", "Energie sparen"], ["lock", "Sperren"], ["none", "Nichts"]]
+          [["hibernate", "Ruhezustand"], ["sleep", "Energiesparen"], ["lock", "Nur sperren"], ["none", "Nichts"]]
             .map(([v, l]) => h("option", { value: v, selected: s.pc.action === v }, l))))),
-        row(manual(key, rerender, "Passt so"))],
+        row(manual(key, rerender, "Übernehmen"))],
       ok: "Gespeichert",
     };
     case "wifi": return {

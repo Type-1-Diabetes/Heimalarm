@@ -232,7 +232,7 @@ async fn install_update(app: tauri::AppHandle, url: String, sha_url: String) -> 
     #[cfg(not(target_os = "windows"))]
     {
         let _ = app;
-        Err("Nur unter Windows – Android aktualisiert über das Plugin".into())
+        Err("Nur unter Windows".into())
     }
 }
 
@@ -247,7 +247,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
     let open = MenuItem::with_id(app, "open", "Heimalarm öffnen", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Beenden (keine Alarme mehr)", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Beenden – danach keine Alarme", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &quit])?;
 
     let mut tray = TrayIconBuilder::with_id("main")

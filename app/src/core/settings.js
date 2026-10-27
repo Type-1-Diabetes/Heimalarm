@@ -86,7 +86,7 @@ export const defaults = {
   },
   // Divera 24/7 – persönlicher Zugang. Bleibt auf diesem Gerät (wird nicht abgeglichen).
   divera: {
-    key: "",                // persönlicher Accesskey (Divera → Profil → Login → API-Schlüssel)
+    key: "",                // persönlicher Accesskey (Divera → Einstellungen → Debug → Accesskey)
     poll: false,            // Alarme direkt bei Divera abfragen
     pollSec: 20,
     answerGo: "",           // Rückmeldung zum Divera-Einsatz bei „Ich fahre“ (Status-ID)

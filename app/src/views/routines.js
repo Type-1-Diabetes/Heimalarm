@@ -122,7 +122,7 @@ function heatRow(a, del) {
     list.length === 0 && h("p.meta.warn", {}, "Noch kein Thermostat eingerichtet – unter Licht & Geräte hinzufügen."),
     box,
     h("p.meta", {}, has.pi()
-      ? "Die vorherige Temperatur kommt mit „Wieder da“ oder nach der Zeit unten zurück."
+      ? "Die vorherige Temperatur kommt mit „Einsatz beenden“ oder nach der Zeit unten zurück."
       : "Ohne Zentrale merkt sich Heimalarm die vorherige Temperatur nicht – dafür eine zweite Routine anlegen."));
 }
 
@@ -190,7 +190,7 @@ const actionRow = (a, del) => {
         field("Zustand", select([["ON", "An"], ["OFF", "Aus"], ["TOGGLE", "Umschalten"]], a.payload.state || "ON", (v) => (a.payload.state = v))),
         field("Helligkeit %", h("input.input", { type: "number", min: 1, max: 100, value: a.payload.brightness ? Math.round((a.payload.brightness / 254) * 100) : "", placeholder: "unverändert", onchange: (e) => { if (e.target.value) a.payload.brightness = Math.round((Number(e.target.value) / 100) * 254); else delete a.payload.brightness; } })),
         field("Farbe", h("input.color-input", { type: "color", value: a.payload.color?.hex || "#ffffff", onchange: (e) => (a.payload.color = { hex: e.target.value }) })),
-        field("Übergang (s)", h("input.input", { type: "number", min: 0, value: a.transition ?? 1, onchange: (e) => (a.transition = Number(e.target.value)) }), "C4 – sanft hochdimmen"),
+        field("Übergang (s)", h("input.input", { type: "number", min: 0, value: a.transition ?? 1, onchange: (e) => (a.transition = Number(e.target.value)) }), "Sanft hochdimmen, z. B. 4 s."),
         field("Danach aus nach (s)", h("input.input", { type: "number", min: 0, value: a.offAfterSec || 0, onchange: (e) => (a.offAfterSec = Number(e.target.value)) }), "0 = bleibt an")),
       h("label.row", { style: "gap:6px" }, h("input", { type: "checkbox", checked: a.payload.color?.hex !== undefined, onchange: (e) => { if (!e.target.checked) delete a.payload.color; else a.payload.color = { hex: "#ff3b2f" }; } }), "Farbe setzen"),
     );
@@ -246,7 +246,7 @@ function editor(routine, rerender) {
         has.pi() && h("button.btn.small", { onclick: () => { r.actions.push({ type: "restore" }); paint(); } }, "+ Vorher-Zustand"))),
 
     // B8 – Rückkehr
-    field("Vorherigen Zustand wiederherstellen nach (Minuten)", h("input.input", { type: "number", min: 0, value: r.restoreAfterMin || 0, onchange: (e) => (r.restoreAfterMin = Number(e.target.value)) }), "0 = nicht automatisch. „Wieder da“ geht immer per Knopf."),
+    field("Vorherigen Zustand wiederherstellen nach (Minuten)", h("input.input", { type: "number", min: 0, value: r.restoreAfterMin || 0, onchange: (e) => (r.restoreAfterMin = Number(e.target.value)) }), "0 = nicht automatisch. „Einsatz beenden“ geht immer per Knopf."),
 
     h("div.row", {},
       h("button.btn.primary", { onclick: () => { const list = (shared().routines || []).filter((x) => x.id !== r.id); save([...list, r]); close(); rerender(); toast("Routine gespeichert"); } }, "Speichern"),
@@ -310,17 +310,17 @@ export function routinesView(rerender) {
       h("div.split-grp", {}, "Allgemein"),
       h("a.split-item", { href: "#/routinen/allgemein", "aria-current": current === "allgemein" ? "page" : null },
         h("span.ico", { style: "--a:var(--c-app)" }, icon("home")),
-        h("span.split-item-text", {}, h("b", {}, "Wieder da & Export"), h("small" + (s.vacation ? ".warn" : ""), {}, s.vacation ? "Wieder da, Sichern, Laden" : "Wieder da, Sichern, Laden")),
+        h("span.split-item-text", {}, h("b", {}, "Einsatz beenden & Export"), h("small" + (s.vacation ? ".warn" : ""), {}, "Einsatz beenden, Sichern, Laden")),
         h("span.chev", {}, icon("chev")))));
 
   let detail = null;
   if (current === "allgemein") {
     detail = h("section.split-detail", { style: "--a:var(--c-app)" },
       h("a.split-back", { href: "#/routinen" }, icon("back"), "Routinen"),
-      h("div.split-head", {}, h("span.ico.big", { style: "--a:var(--c-app)" }, icon("home")), h("div", {}, h("p.crumb", {}, "Routinen"), h("h2", {}, "Wieder da & Export"))),
+      h("div.split-head", {}, h("span.ico.big", { style: "--a:var(--c-app)" }, icon("home")), h("div", {}, h("p.crumb", {}, "Routinen"), h("h2", {}, "Einsatz beenden & Export"))),
       h("p.split-sub", {}, `Routinen laufen ${has.pi() ? "auf der Zentrale" : "auf dem Handy"}.`),
       h("section.card", {},
-        has.pi() && h("div.row", {}, h("button.btn", { onclick: () => { emit("restore"); publish("heimalarm/cmd/restore", {}); toast("Vorheriger Zustand wird wiederhergestellt"); } }, "Wieder da – Zustand zurück"))),
+        has.pi() && h("div.row", {}, h("button.btn", { onclick: () => { emit("restore"); publish("heimalarm/cmd/restore", {}); toast("Vorheriger Zustand wird wiederhergestellt"); } }, "Einsatz beenden – Zustand zurück"))),
       h("section.card", {}, h("h3", {}, "Sichern und laden"),
         h("p.hint", {}, "Alle Routinen als Text – zum Sichern oder für eine andere Zentrale."),
         h("div.row", {},

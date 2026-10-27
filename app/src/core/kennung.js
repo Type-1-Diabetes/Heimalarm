@@ -15,4 +15,4 @@ export const normalizeKennung = (raw = "") => String(raw).trim().toLowerCase()
 /** Liste mit Komma, z. B. für „Abfrage auch bei Alarm von“. */
 export const normalizeKennungList = (raw = "") => String(raw).split(",").map(normalizeKennung).filter(Boolean).join(", ");
 
-export const KENNUNG_HINT = "Kurzer Name ohne Leerzeichen, z. B. „daniel“. Muss auf allen deinen Geräten und im Melder gleich sein. Jede Person braucht eine eigene.";
+export const KENNUNG_HINT = "Kurzer Name ohne Leerzeichen, z. B. „alex“. Muss auf allen deinen Geräten und im Melder gleich sein. Jede Person braucht eine eigene.";

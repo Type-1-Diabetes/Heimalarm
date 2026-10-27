@@ -53,7 +53,7 @@ export function hassSection(rerender) {
     ["sensor.heimalarm_stichwort", "Letztes Stichwort", "Mit allen Angaben des letzten Alarms."],
     ["sensor.heimalarm_letzter_alarm", "Letzter Alarm", "Zeitpunkt."],
     ["binary_sensor.heimalarm_melder_…", "Melder", "Ist der ESP32 verbunden? Je Melder einer."],
-    ...(c.buttons ? [["button.heimalarm_wieder_da", "Wieder da", "Beendet den Einsatz, Licht zurück."], ["button.heimalarm_test_…", "Testalarm", "Je Person, ohne Folgen."]] : []),
+    ...(c.buttons ? [["button.heimalarm_wieder_da", "Einsatz beenden", "Beendet den Einsatz, Licht zurück."], ["button.heimalarm_test_…", "Testalarm", "Je Person, ohne Folgen."]] : []),
   ];
 
   return section("hass", "Home Assistant", "Heimalarm erscheint als eigenes Gerät. Du brauchst dafür weder Integration noch Token. Damit baust du in Home Assistant eigene Automationen für den Einsatz.",
@@ -74,9 +74,9 @@ export function hassSection(rerender) {
     c.enabled && h("div.group", {}, h("h3.group-title", {}, "Optionen"),
       h("div.fields", {},
         field("Einsatz bleibt an (Minuten)", h("input.input", { type: "number", min: 1, max: 720, value: c.activeMin,
-          onchange: (e) => setCfg({ activeMin: Math.min(720, Math.max(1, Number(e.target.value) || 30)) }) }), "„Wieder da“ schaltet ihn früher aus."),
+          onchange: (e) => setCfg({ activeMin: Math.min(720, Math.max(1, Number(e.target.value) || 30)) }) }), "„Einsatz beenden“ schaltet ihn früher aus."),
         field("Discovery-Präfix", h("input.input", { value: c.prefix, spellcheck: "false", onchange: (e) => setCfg({ prefix: e.target.value.trim() || "homeassistant" }) }), "Nur ändern, wenn du es in Home Assistant geändert hast.")),
-      switchRow("Knöpfe „Wieder da“ und „Testalarm“", "Damit lässt sich Heimalarm auch aus Home Assistant bedienen.", c.buttons, (v) => setCfg({ buttons: v })),
+      switchRow("Knöpfe „Einsatz beenden“ und „Testalarm“", "Damit lässt sich Heimalarm auch aus Home Assistant bedienen.", c.buttons, (v) => setCfg({ buttons: v })),
       switchRow("Auch bei Testalarmen melden", "Gut zum Ausprobieren eigener Automationen. Generalprobe meldet immer.", c.tests, (v) => setCfg({ tests: v }))),
 
     c.enabled && h("details.group", {}, h("summary.group-title", {}, "Beispiel-Automation"),

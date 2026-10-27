@@ -25,7 +25,7 @@ pub async fn takeover_open(app: tauri::AppHandle, on: bool) -> Result<(), String
 
 #[cfg(desktop)]
 fn open(app: tauri::AppHandle, on: bool) -> Result<(), String> {
-    let main = app.get_webview_window("main").ok_or("Hauptfenster fehlt")?;
+    let main = app.get_webview_window("main").ok_or("Alarmfenster ließ sich nicht öffnen")?;
     // alte Zusatzfenster immer schließen
     for (label, w) in app.webview_windows() {
         if label.starts_with(MIRROR_PREFIX) {

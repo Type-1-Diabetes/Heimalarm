@@ -1,6 +1,0 @@
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "categories": { "correctness": "error", "suspicious": "warn" },
-  "rules": { "eqeqeq": ["warn", "smart"], "no-shadow": "warn", "no-unused-vars": "warn" },
-  "ignorePatterns": ["dist", "src-tauri"]
-}

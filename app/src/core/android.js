@@ -23,7 +23,8 @@ export function phoneAlarm({ title, text, test = false }) {
   const ph = settings().phone || {};
   call("show_alarm", {
     title, text,
-    fullscreen: !test && ph.fullscreen !== false,
+    fullscreen: !test && ph.fullscreen !== false && ph.ask !== false,
+    notify: ph.notify !== false,
     vibrate: ph.vibrate !== false,
     sound: Boolean(ph.sound),
     tone: ph.tone || "",
@@ -79,13 +80,31 @@ export function configureNative() {
   const pkgs = [...Object.values(s.apps || {}).filter((a) => a.on && a.pkg).map((a) => a.pkg),
     ...s.filterApps.split(",").map((x) => x.trim()).filter(Boolean)];
   const words = s.filterWords.split(",").map((x) => x.trim()).filter(Boolean);
-  call("configure", { packages: pkgs, words, service: settings().android?.service !== false, silent: phoneMode() === "off", mode: phoneMode(), ...extras() }).catch(() => {});
+  call("configure", { packages: pkgs, words, service: settings().android?.service !== false, silent: phoneMode() === "off", mode: phoneMode(),
+    restart: settings().android?.restart !== false, notify: settings().phone?.notify !== false, ...extras() }).catch(() => {});
 }
 
 export const androidStatus = () => (enabled ? call("status") : Promise.resolve({ supported: false }));
 export const openBatterySettings = () => call("open_battery_settings");
 export const openNotificationAccess = () => call("open_notification_access");
 export const openFullScreenSettings = () => call("open_full_screen_settings");
+export const openAppDetails = () => call("open_app_details");
+
+/** Standby-Bucket ab „selten“ (40) oder Hintergrund gesperrt: Android legt die App schlafen (Samsung „Tiefschlaf“). */
+export const sleeping = (st) => Boolean(st?.backgroundRestricted) || Number(st?.standbyBucket) >= 40;
+
+/** Was fehlt, damit Heimalarm im Hintergrund zuverlässig läuft. Für Start-Hinweis und „Hintergrund & Rechte“. */
+export function backgroundIssues(st) {
+  if (!st?.supported) return [];
+  const a = settings().android || {};
+  const out = [];
+  if (a.service === false) out.push({ id: "service", title: "Hintergrund-Dienst ist aus", why: "Android beendet Heimalarm dann nach kurzer Zeit." });
+  if (st.batteryOptimized) out.push({ id: "akku", title: "Akku-Optimierung ist an", why: "Android pausiert Heimalarm, Alarme kommen verspätet an." });
+  if (sleeping(st)) out.push({ id: "schlaf", title: "Android legt Heimalarm schlafen", why: "App-Infos → Akku → „Nicht eingeschränkt“." });
+  else if (st.samsung && !a.samsungDone) out.push({ id: "samsung", title: "Samsung: „Nie in Standby“ prüfen", why: "Einstellungen → Akku → Hintergrundnutzungslimits → Nie in den Standby versetzte Apps → Heimalarm." });
+  if (a.restart !== false && st.overlayAllowed === false) out.push({ id: "neustart", title: "Auto-Neustart braucht eine Erlaubnis", why: "„Über anderen Apps einblenden“, sonst darf Heimalarm sich nicht selbst starten." });
+  return out;
+}
 export async function setBackgroundService(on) {
   if (!enabled) return;
   await call("set_service", { enabled: on });
@@ -133,6 +152,7 @@ export async function initAndroid() {
   configureNative();
   const { on } = await import("./events.js");
   on("phone-open-app", (a) => openAlarmApp(a));
+  on("phone-alert", (a) => phoneAlarm({ title: a.keyword || "Einsatz", text: [a.unit, a.address].filter(Boolean).join(" · ") || "Heimalarm" }));
   // „Ich fahre“ am Handy → Navigation zum Gerätehaus
   on("answer", ({ going, test, remote }) => {
     if (going && !test && !remote && settings().phone?.navigate === "go") navigateToStation();

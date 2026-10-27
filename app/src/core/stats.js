@@ -95,6 +95,22 @@ export function addSignal(a) {
   save();
 }
 
+/** Verspätet verarbeitete Meldung (App lief nicht, Handy war unterwegs): zum Einsatz mit passender Zeit legen,
+ *  sonst als eigenen Einsatz mit der echten Uhrzeit eintragen. Der Abgleich bringt es auf die anderen Geräte. */
+export function addLate(a) {
+  if (!on()) return;
+  const e = list.filter((x) => !x.deleted && Math.abs(x.ts - a.ts) <= SAME_MS).toSorted((x, y) => Math.abs(x.ts - a.ts) - Math.abs(y.ts - a.ts))[0];
+  if (!e) { recordAlarm(a); return; }
+  if (a.source && !e.sources.includes(a.source)) {
+    e.sources.push(a.source);
+    (e.srcAt ||= {})[a.source] = Math.max(0, Math.round((a.ts - e.ts) / 1000));
+  }
+  betterKeyword(e, a.keyword);
+  for (const k of FIELDS) if (a[k] && !e[k]) e[k] = a[k];
+  if (a.ts < e.ts) e.ts = a.ts;   // frühester Zeitpunkt zählt (wie beim Abgleich)
+  save();
+}
+
 /** going: true | false, timeout: keine Antwort am PC */
 export function recordAnswer(going, { timeout = false } = {}) {
   if (!on()) return;

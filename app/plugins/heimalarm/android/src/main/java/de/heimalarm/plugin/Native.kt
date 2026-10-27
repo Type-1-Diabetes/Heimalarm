@@ -14,14 +14,16 @@ import org.json.JSONObject
  */
 object Native {
     private const val PREFS = "heimalarm"
-    private const val MAX_AGE_MS = 10 * 60 * 1000L   // ältere Alarme verfallen
+    private const val MAX_AGE_MS = 24 * 3600 * 1000L   // ältere Alarme verfallen; spät abgeholte ergänzen nur noch den Einsatz
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun configure(ctx: Context, packages: List<String>, words: List<String>, service: Boolean, silent: Boolean = false,
                   mode: String = "heimalarm", dnd: Boolean = false, torch: Boolean = false, wake: Boolean = false,
-                  dndMin: Int = 15, torchSec: Int = 30, wakeSec: Int = 30) {
+                  dndMin: Int = 15, torchSec: Int = 30, wakeSec: Int = 30, restart: Boolean = true, notify: Boolean = true) {
         prefs(ctx).edit()
+            .putBoolean("restart", restart)
+            .putBoolean("notify", notify)
             .putInt("dndMin", dndMin)
             .putInt("torchSec", torchSec)
             .putInt("wakeSec", wakeSec)
@@ -67,6 +69,20 @@ object Native {
     }
 
     fun serviceWanted(ctx: Context) = prefs(ctx).getBoolean("service", true)
+    fun restartWanted(ctx: Context) = prefs(ctx).getBoolean("restart", true)
+    fun notifyWanted(ctx: Context) = prefs(ctx).getBoolean("notify", true)
+
+    const val EXTRA_BACKGROUND = "heimalarm_background"
+
+    /** Heimalarm starten, ohne es nach vorn zu holen (Auto-Neustart). Android erlaubt das aus dem
+     *  Hintergrund nur mit „Über anderen Apps einblenden“. Gibt false zurück, wenn es nicht ging. */
+    fun launchSelf(ctx: Context): Boolean {
+        if (HeimalarmPlugin.instance?.alive() == true || !PhoneActions.canOverlay(ctx)) return false
+        val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName) ?: return false
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        launch.putExtra(EXTRA_BACKGROUND, true)
+        return try { ctx.startActivity(launch); true } catch (_: Exception) { false }
+    }
 
     private fun list(ctx: Context, key: String): List<String> {
         val a = JSONArray(prefs(ctx).getString(key, "[]"))
@@ -83,7 +99,7 @@ object Native {
     }
 
     @Synchronized
-    fun buffer(ctx: Context, app: String, title: String, text: String, handled: Boolean = false) {
+    fun buffer(ctx: Context, app: String, title: String, text: String, ts: Long, handled: Boolean = false) {
         val now = System.currentTimeMillis()
         val old = JSONArray(prefs(ctx).getString("pending", "[]"))
         val keep = JSONArray()
@@ -91,7 +107,7 @@ object Native {
             val o = old.getJSONObject(i)
             if (now - o.optLong("ts") < MAX_AGE_MS) keep.put(o)
         }
-        keep.put(JSONObject().put("app", app).put("title", title).put("text", text).put("ts", now).put("handled", handled))
+        keep.put(JSONObject().put("app", app).put("title", title).put("text", text).put("ts", ts).put("handled", handled))
         prefs(ctx).edit().putString("pending", keep.toString()).apply()
     }
 
@@ -123,5 +139,6 @@ class BootReceiver : BroadcastReceiver() {
         if (a != Intent.ACTION_BOOT_COMPLETED && a != Intent.ACTION_MY_PACKAGE_REPLACED && a != "android.intent.action.QUICKBOOT_POWERON") return
         if (!Native.serviceWanted(context)) return
         try { Native.startService(context) } catch (_: Exception) { /* Android verbietet es manchmal – App öffnet sich dann beim Alarm */ }
+        if (Native.restartWanted(context)) Native.launchSelf(context)
     }
 }

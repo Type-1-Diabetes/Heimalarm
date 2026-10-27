@@ -14,7 +14,7 @@ import { answerDivera } from "./divera.js";
 import { answerApager } from "./apager.js";
 import { presenceSettled } from "./discord.js";
 import { runHotkeys } from "./hotkeys.js";
-import { recordAlarm, recordAnswer, addSignal, markEvent, noteLast } from "./stats.js";
+import { recordAlarm, recordAnswer, addSignal, addLate, markEvent, noteLast } from "./stats.js";
 import { readiness } from "./readiness.js";
 const offDuty = () => readiness().mode !== "ready";
 
@@ -147,6 +147,7 @@ function handleAlarm(a) {
     if (pm === "off" && !probe) { log("info", "Handy bei Alarm aus – nichts angezeigt"); return; }
     if (a.phoneDone) { log("info", "Alarm-App wurde schon geöffnet"); return; }
     if (pm === "app") { emit("phone-open-app", engine.last); return; }   // core/android.js öffnet SYBOS/aPager/Divera
+    if (settings().phone?.ask === false) { emit("phone-alert", engine.last); return; }   // ohne Abfrage: nur Mitteilung, Ton, Vibration
     emit("takeover", engine.last);   // Handy: groß anzeigen, Ton/Vibration (AlarmSound.kt), Rückmeldung per Knopf
   } else if (!test) {
     engine.last.notified = true;
@@ -176,8 +177,13 @@ export const simulateContact = () => { publish(`alarm/${settings().alarm.me}/led
 /** I2 – Generalprobe: Routinen schalten wirklich, PC-Aktion wird nur angezeigt. */
 export const fullProbe = () => (mode() === "direkt" ? (forward({ source: "Generalprobe", probe: true }), true) : publish(`alarm/${settings().alarm.me}`, { source: "Generalprobe", probe: true }));
 
-/** Alarm aus einer Android-Benachrichtigung (A1/A6). */
-export function alarmFromNotification({ app, title, text, handled = false }) {
+/** Älter als das: kein Alarm mehr, nur Einsatzinfos ergänzen. */
+const LATE_MS = 2 * 60e3;
+/** Schon verarbeitete Benachrichtigungen (live und aus dem Puffer kann dieselbe kommen). */
+const seenNotes = new Map();
+
+/** Alarm aus einer Android-Benachrichtigung (A1/A6). ts = Zeitpunkt der Benachrichtigung. */
+export function alarmFromNotification({ app, title, text, ts, handled = false }) {
   const s = settings().alarm;
   const pkg = String(app || "").toLowerCase();
   if (pkg) { recentApps.delete(pkg); recentApps.set(pkg, Date.now()); if (recentApps.size > 12) recentApps.delete(recentApps.keys().next().value); }
@@ -194,7 +200,20 @@ export function alarmFromNotification({ app, title, text, handled = false }) {
   const words = s.filterWords.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
   const body = `${title} ${text}`.toLowerCase();
   if (words.length && !words.some((w) => body.includes(w))) return;
-  forward({ source, keyword: String(title || "").slice(0, 80), text: String(text || "").slice(0, 1000), app: pkg, ...(handled ? { phoneDone: true } : {}) });
+  const now = Date.now();
+  const at = Number(ts) > 0 && Number(ts) <= now ? Number(ts) : now;
+  const key = `${pkg}|${at}|${title}`;
+  for (const [k, t] of seenNotes) if (now - t > 24 * 3600e3) seenNotes.delete(k);
+  if (seenNotes.has(key)) return;
+  seenNotes.set(key, now);
+  const data = { source, keyword: String(title || "").slice(0, 80), text: String(text || "").slice(0, 1000), app: pkg, ts: at };
+  if (now - at > LATE_MS) {
+    // Zu spät für „Fährst du?“ und Routinen: nur den Einsatz im Logbuch ergänzen
+    log("info", "Verspätete Meldung – Einsatz ergänzt, kein Alarm", `${source} · ${fmtTime(at)} · ${Math.round((now - at) / 60e3)} min später verarbeitet`);
+    addLate({ who: s.me, ...data });
+    return;
+  }
+  forward({ ...data, ...(handled ? { phoneDone: true } : {}) });
 }
 
 /** Antwort an die Alarm-Apps weitergeben, die dafür eingerichtet sind. */

@@ -52,6 +52,12 @@ class KeepAliveService : Service() {
         return START_STICKY
     }
 
+    /** App aus der Übersicht gewischt: Auto-Neustart startet sie gleich wieder im Hintergrund. */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        if (Native.restartWanted(this)) android.os.Handler(mainLooper).postDelayed({ Native.launchSelf(this) }, 1500)
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         running = false
         super.onDestroy()

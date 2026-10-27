@@ -14,7 +14,7 @@ import { connect, state, publish, APP_VERSION } from "../core/mqtt.js";
 import { ACTIONS, setAutostart, hibernateEnabled, enableHibernate, macAddress } from "../core/pc.js";
 import { hasPcFeatures, isAndroid, isTauri } from "../core/platform.js";
 import { requireAdmin, isAdmin } from "../core/admin.js";
-import { androidStatus, openBatterySettings, openNotificationAccess, openFullScreenSettings, setBackgroundService, openOverlaySettings, openDndSettings, testTorch, navigateToStation } from "../core/android.js";
+import { androidStatus, openBatterySettings, openNotificationAccess, openFullScreenSettings, openAppDetails, sleeping, backgroundIssues, setBackgroundService, openOverlaySettings, openDndSettings, testTorch, navigateToStation } from "../core/android.js";
 import { applyTheme } from "../ui/theme.js";
 import { biometricLabel } from "../core/biometric.js";
 import { recentApps, testAlarm } from "../core/engine.js";
@@ -536,16 +536,33 @@ function pc(rerender) {
 function androidSection(rerender) {
   if (android === null) androidStatus().then((s) => { android = s; rerender(); }).catch(() => (android = { supported: false }));
   const s = android || {};
+  const a = settings().android;
+  const recheck = () => setTimeout(() => { android = null; rerender(); }, 4000);
+  const restartBlocked = a.restart !== false && s.overlayAllowed === false;
   return section("android", "Android", "Damit Alarme auch ankommen, wenn die App im Hintergrund ist.",
-    switchRow("Hintergrund-Dienst", "Dauerhafte Mitteilung, Android beendet die App dann nicht.", settings().android.service, (v) => setBackgroundService(v).then(() => { android = null; rerender(); })),
+    switchRow("Hintergrund-Dienst", "Dauerhafte Mitteilung, Android beendet die App dann nicht.", a.service, (v) => setBackgroundService(v).then(() => { android = null; rerender(); })),
+    switchRow("Automatisch neu starten", "Wurde Heimalarm beendet oder weggewischt, startet es sich im Hintergrund wieder. Auch nach dem Einschalten des Handys und bei einem Alarm.",
+      a.restart !== false, (v) => { set("android.restart", v); rerender(); }),
+    restartBlocked && h("div.item", {}, h("div.item-head", {}, h("b", {}, "Über anderen Apps einblenden"), h("span.chip.bad", {}, "nicht erlaubt")),
+      h("small", {}, "Ohne diese Erlaubnis darf sich Heimalarm nicht selbst starten."),
+      h("button.btn.small", { onclick: () => openOverlaySettings().then(recheck) }, "Erlauben")),
     h("div.item", {}, h("div.item-head", {}, h("b", {}, "Akku-Optimierung"), s.batteryOptimized ? h("span.chip.bad", {}, "aktiv – bitte ausschalten") : h("span.chip.ok", {}, "ausgeschaltet")),
-      s.batteryOptimized && h("button.btn.small", { onclick: () => openBatterySettings().then(() => setTimeout(() => { android = null; rerender(); }, 4000)) }, "Ausnahme erlauben")),
+      s.batteryOptimized && h("button.btn.small", { onclick: () => openBatterySettings().then(recheck) }, "Ausnahme erlauben")),
+    (sleeping(s) || s.samsung) && h("div.item", {},
+      h("div.item-head", {}, h("b", {}, s.samsung ? "Standby (Samsung)" : "Standby"),
+        sleeping(s) ? h("span.chip.bad", {}, "schläft") : a.samsungDone ? h("span.chip.ok", {}, "eingetragen") : h("span.chip.warn", {}, "bitte prüfen")),
+      h("small", {}, sleeping(s)
+        ? "Android legt Heimalarm schlafen. App-Infos → Akku → „Nicht eingeschränkt“ wählen."
+        : "Samsung beendet Apps trotzdem. Einstellungen → Akku → Hintergrundnutzungslimits → „Nie in den Standby versetzte Apps“ → Heimalarm hinzufügen."),
+      h("div.row", {},
+        h("button.btn.small", { onclick: () => openAppDetails().then(recheck) }, "App-Infos öffnen"),
+        s.samsung && !sleeping(s) && !a.samsungDone && h("button.btn.small", { onclick: () => { set("android.samsungDone", true); rerender(); } }, "Ist eingetragen"))),
     h("div.item", {}, h("div.item-head", {}, h("b", {}, "Benachrichtigungen mitlesen"), s.notificationAccess ? h("span.chip.ok", {}, "erlaubt") : h("span.chip", {}, "nicht erlaubt")),
       !s.notificationAccess && h("button.btn.small", { onclick: () => openNotificationAccess() }, "Zugriff erlauben")),
     s.fullScreenAllowed === false && h("div.item", {}, h("div.item-head", {}, h("b", {}, "Vollbild-Meldungen"), h("span.chip.bad", {}, "nicht erlaubt")),
       h("small", {}, "Ohne diese Erlaubnis erscheint der Alarm nur als Mitteilung, nicht über dem Sperrbildschirm."),
       h("button.btn.small", { onclick: () => openFullScreenSettings().then(() => setTimeout(() => { android = null; rerender(); }, 4000)) }, "Erlauben")),
-    h("p.meta", {}, "Nach einem Neustart des Handys startet Heimalarm von selbst. Erkennt es einen Alarm, öffnet sich die App."),
+    h("p.meta", {}, a.restart !== false ? "Nach einem Neustart des Handys startet Heimalarm von selbst." : "Nach einem Neustart des Handys läuft nur der Hintergrund-Dienst. Alarme werden gemerkt und beim Öffnen weitergegeben."),
   );
 }
 
@@ -556,7 +573,7 @@ function handyAlarm(rerender) {
 }
 
 const PHONE_MODES = {
-  heimalarm: "Heimalarm meldet sich groß wie am PC: „Fährst du?“, Rückmeldung per Knopf.",
+  heimalarm: "Heimalarm meldet sich selbst: Abfrage „Fährst du?“, Mitteilung, Ton und Vibration, so wie unten eingestellt.",
   app: "Heimalarm öffnet SYBOS, aPager oder Divera direkt beim Einsatz. Rückmeldung gibst du dort.",
   off: "Das Handy zeigt nichts, klingelt und vibriert nicht. Weiterleiten an den PC, Routinen und Protokoll laufen weiter.",
 };
@@ -584,7 +601,11 @@ function phoneAlarmSettings(s, rerender) {
       "Ohne diese Erlaubnis öffnet sich die Alarm-App erst, wenn du die Heimalarm-Meldung antippst. Android-Name: „Über anderen Apps einblenden“.",
       "Erlauben", openOverlaySettings),
 
-    pm === "heimalarm" && toggle("phone.fullscreen", "Groß anzeigen, auch auf dem Sperrbildschirm", "Bei eigenem Alarm erscheint Heimalarm über allem, mit Knopf „Stopp“.", () => rerender()),
+    pm === "heimalarm" && toggle("phone.ask", "Abfrage „Fährst du?“ öffnen", "Aus: kein Abfrage-Bildschirm, nur Mitteilung, Ton und Vibration. Rückmeldung dann in der Alarm-App.", () => rerender()),
+    pm === "heimalarm" && toggle("phone.notify", "Mitteilung anzeigen", "Meldung in der Statusleiste mit Stichwort. Aus: keine Mitteilung von Heimalarm, die Alarm-App meldet sich ja selbst.", () => rerender()),
+    pm === "heimalarm" && ph.ask !== false && ph.notify !== false && toggle("phone.fullscreen", "Groß anzeigen, auch auf dem Sperrbildschirm", "Bei eigenem Alarm erscheint Heimalarm über allem, mit Knopf „Stopp“.", () => rerender()),
+    pm === "heimalarm" && ph.ask !== false && ph.notify === false && h("p.meta", {}, "Ohne Mitteilung erscheint die Abfrage nur, wenn Heimalarm gerade offen ist."),
+    pm === "heimalarm" && ph.ask === false && ph.notify === false && !ph.sound && ph.vibrate === false && h("p.meta", {}, "So meldet sich das Handy bei Alarm gar nicht. Routinen, Weiterleiten an den PC und Logbuch laufen weiter."),
     pm === "heimalarm" && toggle("phone.vibrate", "Vibrieren"),
     pm === "heimalarm" && toggle("phone.sound", "Eigenen Alarmton spielen", "Meist klingelt schon die Alarm-App. Gut, wenn der Melder in der Ladeschale die einzige Quelle ist.", () => rerender()),
     pm === "heimalarm" && ph.sound && h("div.group", {}, ...toneSettings("phone", rerender),
@@ -887,8 +908,8 @@ const PAGES = () => [
     desc: "Akku, Mitlesen, Vollbild",
     lead: "Damit Alarme auch ankommen, wenn die App im Hintergrund ist oder das Handy neu startet.",
     scope: [["phone", "Nur dieses Handy"]],
-    status: () => { if (!android) return plain(""); const n = [android.batteryOptimized, !android.notificationAccess, android.fullScreenAllowed === false].filter(Boolean).length; return n ? warn(`${n} fehlt`) : ok("alles erlaubt"); },
-    warn: () => Boolean(android?.batteryOptimized) },
+    status: () => { if (!android) return plain(""); const n = backgroundIssues(android).length + [!android.notificationAccess, android.fullScreenAllowed === false].filter(Boolean).length; return n ? warn(`${n} fehlt`) : ok("alles erlaubt"); },
+    warn: () => backgroundIssues(android).length > 0 },
   // Zuhause
   { grp: "zuhause", id: "personen", label: "Personen", icon: "people", color: "--c-people", sections: ["personen"],
     desc: "Wer an der Zentrale alarmiert wird",

@@ -44,20 +44,22 @@ class AlarmListener : NotificationListenerService() {
         if (match) PhoneActions.remember(sbn.packageName, sbn.notification.contentIntent ?: sbn.notification.fullScreenIntent)
         val plugin = HeimalarmPlugin.instance?.takeIf { it.alive() }
         if (plugin != null) {
-            plugin.emitNotification(sbn.packageName, title, text)
+            plugin.emitNotification(sbn.packageName, title, text, sbn.postTime)
         } else if (match) {
             // App läuft nicht (z. B. nach Neustart): Alarm merken, damit Heimalarm ihn beim Öffnen weitergibt
             val mode = Native.mode(this)
             Native.runExtras(this)
             if (mode == "app" && PhoneActions.openApp(this, sbn.packageName)) {
                 // Alarm-App ist schon offen – beim späteren Öffnen von Heimalarm nicht noch einmal öffnen
-                Native.buffer(this, sbn.packageName, title, text, handled = true)
+                Native.buffer(this, sbn.packageName, title, text, sbn.postTime, handled = true)
                 return
             }
-            Native.buffer(this, sbn.packageName, title, text)
+            Native.buffer(this, sbn.packageName, title, text, sbn.postTime)
             if (mode == "app") PhoneActions.pendingOpen = sbn.packageName
+            // Auto-Neustart: App im Hintergrund starten, sie holt den Alarm sofort ab und gibt ihn weiter
+            if (Native.restartWanted(this) && Native.launchSelf(this)) return
             // „Aus“: nur leise Mitteilung, damit der Alarm beim Öffnen weitergeleitet werden kann
-            AlarmSound.notifyAlarm(this, "Heimalarm: Alarm erkannt", title.ifEmpty { "Tippen zum Öffnen" }, mode != "off")
+            if (Native.notifyWanted(this) || mode == "off") AlarmSound.notifyAlarm(this, "Heimalarm: Alarm erkannt", title.ifEmpty { "Tippen zum Öffnen" }, mode != "off")
         }
     }
 

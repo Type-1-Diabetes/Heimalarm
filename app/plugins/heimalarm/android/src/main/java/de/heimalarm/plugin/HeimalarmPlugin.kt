@@ -44,6 +44,8 @@ class ConfigArgs {
     var dndMin: Int = 15
     var torchSec: Int = 30
     var wakeSec: Int = 30
+    var restart: Boolean = true
+    var notify: Boolean = true
 }
 
 @InvokeArg
@@ -78,6 +80,7 @@ class AlarmArgs {
     var dndMin: Int = 15
     var torchSec: Int = 30
     var wakeSec: Int = 30
+    var notify: Boolean = true
 }
 
 @InvokeArg
@@ -193,6 +196,14 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
         ret.put("overlayAllowed", PhoneActions.canOverlay(activity))
         ret.put("dndAccess", PhoneActions.hasDndAccess(activity))
         ret.put("torch", PhoneActions.hasTorch(activity))
+        ret.put("samsung", Build.MANUFACTURER.equals("samsung", ignoreCase = true))
+        // Schlafende App (Samsung „Tiefschlaf“, Android „Eingeschränkt“): Bucket ab „selten“ oder Hintergrund gesperrt
+        if (Build.VERSION.SDK_INT >= 28) {
+            val usm = activity.getSystemService(android.app.usage.UsageStatsManager::class.java)
+            ret.put("standbyBucket", usm.appStandbyBucket)
+            val am = activity.getSystemService(android.app.ActivityManager::class.java)
+            ret.put("backgroundRestricted", am.isBackgroundRestricted)
+        }
         invoke.resolve(ret)
     }
 
@@ -333,7 +344,7 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun configure(invoke: Invoke) {
         val a = invoke.parseArgs(ConfigArgs::class.java)
-        Native.configure(activity, a.packages.toList(), a.words.toList(), a.service, a.silent, a.mode, a.dnd, a.torch, a.wake, a.dndMin, a.torchSec, a.wakeSec)
+        Native.configure(activity, a.packages.toList(), a.words.toList(), a.service, a.silent, a.mode, a.dnd, a.torch, a.wake, a.dndMin, a.torchSec, a.wakeSec, a.restart, a.notify)
         invoke.resolve(JSObject())
     }
 
@@ -353,7 +364,7 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
             if (Build.VERSION.SDK_INT >= 27) { activity.setShowWhenLocked(true); activity.setTurnScreenOn(true) }
         }
         AlarmSound.stopSound()
-        AlarmSound.notifyAlarm(activity, a.title, a.text, a.fullscreen)
+        if (a.notify) AlarmSound.notifyAlarm(activity, a.title, a.text, a.fullscreen)
         if (a.sound) AlarmSound.play(activity, a.tone, a.volume, a.ms)
         if (a.vibrate) AlarmSound.vibrate(activity)
         PhoneActions.extras(activity, a.dnd, a.torch, a.wake, a.dndMin, a.torchSec, a.wakeSec)
@@ -460,6 +471,13 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
         invoke.resolve(JSObject())
     }
 
+    /** App-Infos von Heimalarm: dort unter „Akku“ auf „Nicht eingeschränkt“ (Samsung: nimmt die App aus dem Standby) */
+    @Command
+    fun openAppDetails(invoke: Invoke) {
+        activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + activity.packageName)))
+        invoke.resolve(JSObject())
+    }
+
     // ── Alarm-App öffnen, Navigation, Erlaubnisse ─────────────
 
     /** Alarm-App öffnen (Einsatz aus der Benachrichtigung). Darf Android das gerade nicht,
@@ -514,6 +532,11 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     private fun takeOpenIntent(intent: Intent?) {
+        // Von selbst neu gestartet (Auto-Neustart): gleich wieder in den Hintergrund, die App soll nur laufen
+        if (intent?.getBooleanExtra(Native.EXTRA_BACKGROUND, false) == true) {
+            intent.removeExtra(Native.EXTRA_BACKGROUND)
+            activity.moveTaskToBack(true)
+        }
         val pkg = intent?.getStringExtra(PhoneActions.EXTRA_OPEN_APP) ?: return
         intent.removeExtra(PhoneActions.EXTRA_OPEN_APP)
         PhoneActions.pendingOpen = pkg
@@ -535,11 +558,12 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
         PhoneActions.visible = false
     }
 
-    fun emitNotification(app: String, title: String, text: String) {
+    fun emitNotification(app: String, title: String, text: String, ts: Long) {
         val data = JSObject()
         data.put("app", app)
         data.put("title", title)
         data.put("text", text)
+        data.put("ts", ts)   // Zeitpunkt der Benachrichtigung, nicht der Verarbeitung
         trigger("notification", data)
     }
 }

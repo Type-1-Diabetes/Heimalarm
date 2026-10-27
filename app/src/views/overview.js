@@ -20,7 +20,7 @@ import { setDiveraStatus, divera, loadDivera } from "../core/divera.js";
 import { hasPcFeatures, platformName, isTauri } from "../core/platform.js";
 import { on } from "../core/events.js";
 import { startWizard, inProgress, androidState } from "../core/wizard.js";
-import { openNotificationAccess } from "../core/android.js";
+import { openNotificationAccess, backgroundIssues } from "../core/android.js";
 import { MODES, readiness, setReadiness, untilText } from "../core/readiness.js";
 import { pickUntil } from "../ui/until-picker.js";
 import { testAlarm } from "../core/engine.js";
@@ -91,6 +91,18 @@ function notifAccessBanner() {
       h("b", {}, "Alarme aus der Alarm-App werden nicht erkannt"),
       h("p", {}, "Heimalarm darf Benachrichtigungen nicht mitlesen. Ist der Schalter ausgegraut: App-Infos → ⋮ → „Eingeschränkte Einstellungen zulassen“.")),
     h("div.row", {}, h("button.btn.small", { onclick: () => openNotificationAccess().catch(() => toast("Einstellung ließ sich nicht öffnen")) }, "Zugriff erlauben")));
+}
+
+/** Hintergrund nicht eingerichtet (Dienst, Akku, Standby, Auto-Neustart): Alarme kämen verspätet oder gar nicht. */
+function backgroundBanner() {
+  const list = backgroundIssues(androidState());
+  if (!list.length) return null;
+  const one = list.length === 1;
+  return h("div.banner.update.stale", { role: "status" },
+    h("div", {},
+      h("b", {}, one ? list[0].title : "Heimalarm läuft im Hintergrund nicht zuverlässig"),
+      one ? h("p", {}, list[0].why) : h("ul.stale-list", {}, list.map((x) => h("li", {}, h("span", {}, x.title))))),
+    h("div.row", {}, h("a.btn.small", { href: "#/einstellungen/hintergrund" }, "Beheben")));
 }
 
 function espCard() {
@@ -373,6 +385,7 @@ export function overview() {
     h("h1.sr-only", {}, `Start · ${s.device.name || platformName}`),
     statusCard(),
     notifAccessBanner(),
+    backgroundBanner(),
     answerCard(),
     update.available && updateBanner(),
     stale.length > 0 && outdatedBanner(stale),

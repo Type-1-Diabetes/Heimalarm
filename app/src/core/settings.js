@@ -80,6 +80,8 @@ export const defaults = {
     volume: 80,             // Lautstärke des Tons (0–100), innerhalb der Wecker-Lautstärke
     durationSec: 60,        // so lange klingeln, wenn niemand „Stopp“ tippt
     fullscreen: true,       // Alarm auch auf dem Sperrbildschirm groß anzeigen
+    ask: true,              // Abfrage „Fährst du?“ öffnen (aus = nur Mitteilung, Ton, Vibration)
+    notify: true,           // Mitteilung in der Statusleiste
     vibrate: true,
   },
   // Divera 24/7 – persönlicher Zugang. Bleibt auf diesem Gerät (wird nicht abgeglichen).
@@ -109,7 +111,7 @@ export const defaults = {
   // H4 – App-Sperre (lokal, SHA-256 der PIN)
   lock: { pinHash: "", biometric: false },   // biometric = zusätzlich Fingerabdruck / Windows Hello
   // Android: Hintergrund-Dienst für zuverlässigen Empfang
-  android: { service: true, batteryAsked: false },
+  android: { service: true, batteryAsked: false, restart: true, samsungDone: false },   // restart = beendete App von selbst neu starten
   // Beim Start auf GitHub nach einer neueren Version suchen
   update: { auto: true },
   // Abgleich der Einstellungen (Zentrale und gekoppelte Geräte); intervalSec = wie oft ohne Zentrale abgeglichen wird

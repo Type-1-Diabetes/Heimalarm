@@ -6,7 +6,7 @@ import { field, switchRow, select, segmented, ask } from "../ui/form.js";
 import { icon } from "../ui/icons.js";
 import { renderBoard, startTicker, W, H, PAD, GAP, CELL_W, CELL_H } from "../ui/tiles.js";
 import {
-  COLS, ROWS, VIEWS, TILES, GROUPS, dashboards, getDash, addDash, removeDash, updateDash,
+  COLS, ROWS, VIEWS, TILES, GROUPS, TEMPLATES, dashboards, getDash, addDash, applyTemplate, removeDash, updateDash,
   addTile, placeTile, planPlace, removeTile, setTileOpts, fits,
 } from "../core/dashboard.js";
 import { snapshot, boardUse, previewAlarm, SAMPLE_ALARM } from "../core/board.js";
@@ -154,25 +154,52 @@ const focusSel = () => queueMicrotask(() => document.querySelector(".dash-box.se
 
 // ── Palette ─────────────────────────────────────────────────────────────────
 function palette(dash, rerender) {
-  const used = new Set(dash.views[ui.view].map((t) => t.type));
+  const count = {};
+  for (const t of dash.views[ui.view]) count[t.type] = (count[t.type] || 0) + 1;
   return h("section.card.dash-palette", {},
-    h("h2", {}, "Kachel hinzufügen"),
-    h("p.hint", {}, "Klicken legt die Kachel an die erste freie Stelle, oder auf das Raster ziehen."),
+    h("div.pal-head", {},
+      h("h2", {}, "Kachel hinzufügen"),
+      h("span.pal-key", {}, h("span.pk-used-mark", {}, icon("check")), `schon in „${VIEWS[ui.view]}“`)),
+    h("p.hint", {}, "Klicken legt die Kachel an die erste freie Stelle, oder auf das Raster ziehen. Benutzte Kacheln lassen sich ein weiteres Mal hinzufügen."),
     Object.entries(GROUPS).map(([g, grp]) => h("div.pal-row", {},
       h("span.pal-lbl", {}, grp.label, g === "divera" && !has.diveraApi() && h("small", {}, "braucht Divera-Schlüssel")),
       Object.entries(TILES).filter(([, d]) => d.group === g).map(([type, d]) => {
         const miss = missing(d);
-        return h("button.pk" + (used.has(type) ? ".used" : ""), {
+        const n = count[type] || 0;
+        return h("button.pk" + (n ? ".used" : ""), {
           type: "button", draggable: "true", style: `--a:var(${d.color || grp.color})`,
-          title: miss ? `${d.label} – ${miss}` : d.label,
+          title: [d.label, n ? `schon ${n === 1 ? "einmal" : `${n}-mal`} in „${VIEWS[ui.view]}“` : "", miss].filter(Boolean).join(" – "),
           ondragstart: (e) => { e.dataTransfer.setData("text/x-kachel", type); e.dataTransfer.effectAllowed = "copy"; },
           onclick: () => {
             const id = addTile(dash.id, ui.view, type);
             if (!id) return toast("Kein Platz frei – erst eine Kachel verkleinern oder entfernen");
             ui.sel = id; rerender();
           },
-        }, h("i", {}, icon(d.icon)), d.label, miss && d.needs !== "divera" && h("small", {}, miss));
+        }, h("i", {}, icon(d.icon)), d.label, miss && d.needs !== "divera" && h("small", {}, miss),
+          n > 0 && h("span.pk-used-mark", { "aria-hidden": "true" }, n > 1 ? `${n}×` : icon("check")),
+          n > 0 && h("span.sr-only", {}, " – schon im Dashboard"));
       }))));
+}
+
+// ── Vorlagen ────────────────────────────────────────────────────────────────
+/** Mini-Raster einer Vorlagen-Ansicht: Flächen in Kachelfarbe, große mit Symbol. */
+function mini(list, alarm) {
+  return h("div.tpl-mini" + (alarm ? ".alarm" : ""), { "aria-hidden": "true" }, list.length ? list.map(([type, x, y, w, hh]) => {
+    const d = TILES[type];
+    return h("i", { style: `grid-area:${y + 1}/${x + 1}/${y + hh + 1}/${x + w + 1};--a:var(${d.color || GROUPS[d.group].color})` }, w * hh >= 6 ? icon(d.icon) : null);
+  }) : h("span", {}, "leer"));
+}
+
+function templatePicker(rerender) {
+  return h("section.split-detail.dash-tpl-page", {},
+    h("a.split-back", { href: "#/dashboard" }, icon("back"), "Dashboards"),
+    h("div.dash-head", {}, h("h2", {}, "Neues Dashboard")),
+    h("p.hint", {}, "Vorlage wählen, danach jede Kachel frei ändern. Jede Vorlage hat eine Standard- und eine Alarm-Ansicht."),
+    h("div.tpl-grid", {}, Object.entries(TEMPLATES).map(([key, tpl]) => h("button.tpl-card", {
+      type: "button", onclick: () => { const id = addDash(undefined, key); location.hash = `#/dashboard/${id}`; rerender(); },
+    },
+      h("div.tpl-views", {}, h("div", {}, mini(tpl.ruhe), h("small", {}, "Standard")), h("div", {}, mini(tpl.alarm, true), h("small", {}, "Alarm"))),
+      h("b", {}, tpl.label), h("span", {}, tpl.text)))));
 }
 
 // ── Einstellungen der gewählten Kachel ───────────────────────────────────────
@@ -301,7 +328,7 @@ function listPane(dash, rerender) {
         h("span.ico", { style: `--a:var(${d.on ? "--c-pc" : "--text-2"})` }, icon("tv")),
         h("span.split-item-text", {}, h("b", {}, d.name), h("small", {}, d.on ? "läuft auf dem Monitor" : "aus")),
         h("span.chev", {}, icon("chev")))),
-      h("button.btn.small.dash-new", { type: "button", onclick: () => { const id = addDash(); location.hash = `#/dashboard/${id}`; } }, icon("plus"), "Neues Dashboard")),
+      h("a.btn.small.dash-new", { href: "#/dashboard/vorlage" }, icon("plus"), "Neues Dashboard")),
     dash && h("div.dash-settings", {},
       h("div.split-grp", {}, "Anzeige"),
       field("Name", h("input.input", { value: dash.name, maxlength: 40, onchange: (e) => { updateDash(dash.id, { name: e.target.value.trim() || dash.name }); rerender(); } })),
@@ -313,16 +340,38 @@ function listPane(dash, rerender) {
       switchRow("Bei Alarm umschalten", "auf die Alarm-Ansicht", dash.alarmSwitch !== false, (v) => updateDash(dash.id, { alarmSwitch: v })),
       field("Zurück nach (Minuten)", h("input.input", { type: "number", min: 5, max: 720, value: dash.backMin || 60, onchange: (e) => updateDash(dash.id, { backMin: Math.min(720, Math.max(5, Number(e.target.value) || 60)) }) }),
         "Wenn niemand „Einsatz beenden“ drückt."),
+      field("Vorlage laden",
+        select([["", "Vorlage wählen …"], ...Object.entries(TEMPLATES).map(([k, t]) => [k, t.label])], "", async (k) => {
+          if (!k) return;
+          if (await ask(`Beide Ansichten von „${dash.name}“ durch die Vorlage „${TEMPLATES[k].label}“ ersetzen? Die jetzigen Kacheln gehen verloren.`, { ok: "Ersetzen" })) { applyTemplate(dash.id, k); ui.sel = null; }
+          rerender();
+        }), "Ersetzt Standard- und Alarm-Ansicht."),
       h("button.btn.small.ghost.danger", { type: "button", onclick: async () => {
         if (!(await ask(`Dashboard „${dash.name}“ löschen?`, { ok: "Löschen" }))) return;
         removeDash(dash.id); location.hash = "#/dashboard"; rerender();
       } }, "Dashboard löschen")));
 }
 
+/** Scroll-Position der beiden Spalten über das Neuzeichnen retten (sonst springt die Seite bei jeder Änderung nach oben).
+ *  Wie in views/settings.js; nur bei einem anderen Dashboard oder der Vorlagenwahl beginnt die rechte Spalte oben. */
+let lastPage = null;
+function keepScroll(page) {
+  const l = document.querySelector(".split-list"), d = document.querySelector(".split-detail");
+  const listY = l?.scrollTop ?? 0, detailY = page === lastPage ? d?.scrollTop ?? 0 : 0;
+  lastPage = page;
+  queueMicrotask(() => {
+    const nl = document.querySelector(".split-list"), nd = document.querySelector(".split-detail");
+    if (nl) nl.scrollTop = listY;
+    if (nd) nd.scrollTop = detailY;
+  });
+}
+
 export function dashboardView(rerender) {
   if (!hasPcFeatures) return h("section.split-detail", {}, h("p.empty", {}, "Dashboards gibt es nur im Windows-Programm."));
   use(true);
   const id = location.hash.replace("#/", "").split("/")[1];
+  keepScroll(id === "vorlage" ? "vorlage" : getDash(id)?.id || dashboards()[0]?.id || "");
+  if (id === "vorlage") return h("div.split.has-detail", {}, listPane(null, rerender), templatePicker(rerender));
   const dash = getDash(id) || dashboards()[0] || null;
   if (dash && ui.sel && !dash.views[ui.view].some((t) => t.id === ui.sel)) ui.sel = null;
 
@@ -330,7 +379,7 @@ export function dashboardView(rerender) {
     return h("div.split", {}, listPane(null, rerender), h("section.split-detail", {},
       h("section.card", {}, h("h2", {}, "Ein Alarmmonitor für deinen zweiten Monitor"),
         h("p", {}, "Stell dir aus Kacheln zusammen, was ein weiterer Monitor am PC zeigt: Uhr, Bereitschaft, Divera-Status, Fahrzeuge, Termine, Wetter. Bei Alarm wechselt er auf eine eigene Alarm-Ansicht mit Stichwort, Adresse und Rückmeldungen."),
-        h("div.row", {}, h("button.btn.primary", { type: "button", onclick: () => { const nid = addDash(); location.hash = `#/dashboard/${nid}`; } }, "Erstes Dashboard anlegen")))));
+        h("div.row", {}, h("a.btn.primary", { href: "#/dashboard/vorlage" }, "Erstes Dashboard anlegen")))));
   }
 
   const detail = h("section.split-detail.dash-detail", { style: "--a:var(--c-pc)" },

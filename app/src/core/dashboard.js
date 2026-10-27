@@ -5,7 +5,8 @@ import { settings, set } from "./settings.js";
 
 export const COLS = 12;
 export const ROWS = 6;
-export const VIEWS = { ruhe: "Ruhe", alarm: "Alarm" };
+/** Schlüssel „ruhe“ bleibt (gespeicherte Dashboards), angezeigt wird „Standard“. */
+export const VIEWS = { ruhe: "Standard", alarm: "Alarm" };
 
 /** Gruppen in der Palette, je mit Bereichsfarbe (wie in der App). */
 export const GROUPS = {
@@ -41,24 +42,50 @@ export const TILES = {
 const newId = () => Math.random().toString(36).slice(2, 9);
 const tile = (type, x, y, w, h, opts = {}) => ({ id: newId(), type, x, y, w, h, opts });
 
-/** Startaufbau wie im abgestimmten Mockup (docs/mockups/dashboard.html). */
-function starter(name = "Schreibtisch") {
-  return {
-    id: newId(), name, monitor: "", on: false, alarmSwitch: true, backMin: 60,
-    views: {
-      ruhe: [
-        tile("clock", 0, 0, 3, 2), tile("diveraStatus", 0, 2, 3, 1), tile("readiness", 0, 3, 3, 1), tile("system", 0, 4, 3, 2),
-        tile("availability", 3, 0, 3, 2), tile("vehicles", 3, 2, 3, 2), tile("weather", 3, 4, 3, 2),
-        tile("events", 6, 0, 3, 3), tile("news", 6, 3, 3, 3),
-        tile("einsaetze", 9, 0, 3, 3), tile("stats", 9, 3, 3, 2), tile("note", 9, 5, 3, 1, { text: "" }),
-      ],
-      alarm: [
-        tile("alarm", 0, 0, 8, 4), tile("answers", 8, 0, 4, 4),
-        tile("household", 0, 4, 4, 2), tile("vehicles", 4, 4, 4, 2),
-        tile("clock", 8, 4, 4, 1), tile("weather", 8, 5, 4, 1),
-      ],
-    },
-  };
+/**
+ * Vorlagen nach dem Vorbild von Feuerwehr-Alarmmonitoren (AMweb, Divera-Monitor): je eine Standard- und Alarm-Ansicht.
+ * Kacheln als [Typ, x, y, b, h, opts]. „schreibtisch“ ist der Startaufbau aus dem Mockup (docs/mockups/dashboard.html).
+ */
+export const TEMPLATES = {
+  schreibtisch: {
+    label: "Schreibtisch", text: "Ausgewogen für den zweiten Monitor: Uhr, eigener Status, Lage der Wehr und Einsätze.",
+    ruhe: [["clock", 0, 0, 3, 2], ["diveraStatus", 0, 2, 3, 1], ["readiness", 0, 3, 3, 1], ["system", 0, 4, 3, 2],
+      ["availability", 3, 0, 3, 2], ["vehicles", 3, 2, 3, 2], ["weather", 3, 4, 3, 2],
+      ["events", 6, 0, 3, 3], ["news", 6, 3, 3, 3], ["einsaetze", 9, 0, 3, 3], ["stats", 9, 3, 3, 2], ["note", 9, 5, 3, 1, { text: "" }]],
+    alarm: [["alarm", 0, 0, 8, 4], ["answers", 8, 0, 4, 4], ["household", 0, 4, 4, 2], ["vehicles", 4, 4, 4, 2], ["clock", 8, 4, 4, 1], ["weather", 8, 5, 4, 1]],
+  },
+  alarmmonitor: {
+    label: "Alarmmonitor", text: "Wie im Gerätehaus: Termine und Mitteilungen in Ruhe, bei Alarm Lage groß mit Rückmeldungen und Fahrzeugen.",
+    ruhe: [["clock", 0, 0, 4, 2], ["weather", 0, 2, 4, 2], ["availability", 0, 4, 4, 2],
+      ["events", 4, 0, 4, 6], ["news", 8, 0, 4, 4], ["diveraStatus", 8, 4, 4, 1], ["readiness", 8, 5, 4, 1]],
+    alarm: [["alarm", 0, 0, 9, 4], ["answers", 9, 0, 3, 6], ["vehicles", 0, 4, 5, 2], ["clock", 5, 4, 4, 1], ["weather", 5, 5, 4, 1]],
+  },
+  fahrzeuge: {
+    label: "Fahrzeuge & Stärke", text: "Für Führungskräfte: Fahrzeugstatus und Verfügbarkeit der Einheit immer im Blick, bei Alarm wer kommt.",
+    ruhe: [["vehicles", 0, 0, 5, 6], ["availability", 5, 0, 7, 3], ["clock", 5, 3, 3, 2], ["weather", 8, 3, 4, 2], ["diveraStatus", 5, 5, 7, 1]],
+    alarm: [["alarm", 0, 0, 8, 3], ["answers", 8, 0, 4, 6], ["vehicles", 0, 3, 5, 3], ["availability", 5, 3, 3, 3]],
+  },
+  zuhause: {
+    label: "Zuhause", text: "Ohne Divera: Uhr, Wetter und Bereitschaft, bei Alarm Stichwort, Adresse und wer aus dem Haushalt fährt.",
+    ruhe: [["clock", 0, 0, 8, 4], ["weather", 8, 0, 4, 2], ["readiness", 8, 2, 4, 2], ["system", 0, 4, 4, 2], ["note", 4, 4, 8, 2, { text: "" }]],
+    alarm: [["alarm", 0, 0, 8, 6], ["household", 8, 0, 4, 3], ["clock", 8, 3, 4, 2], ["weather", 8, 5, 4, 1]],
+  },
+  minimal: {
+    label: "Nur das Nötigste", text: "Große Uhr und Bereitschaft. Bei Alarm füllt die Lage den ganzen Bildschirm.",
+    ruhe: [["clock", 0, 0, 12, 4], ["readiness", 0, 4, 6, 2], ["weather", 6, 4, 6, 2]],
+    alarm: [["alarm", 0, 0, 12, 6]],
+  },
+  leer: { label: "Leer", text: "Leeres Raster, alle Kacheln selbst wählen.", ruhe: [], alarm: [] },
+};
+
+const fromTemplate = (key) => {
+  const tpl = TEMPLATES[key] || TEMPLATES.schreibtisch;
+  const build = (list) => list.map(([type, x, y, w, h, opts]) => tile(type, x, y, w, h, opts ? { ...opts } : {}));
+  return { ruhe: build(tpl.ruhe), alarm: build(tpl.alarm) };
+};
+
+function starter(name = "Schreibtisch", tpl = "schreibtisch") {
+  return { id: newId(), name, monitor: "", on: false, alarmSwitch: true, backMin: 60, views: fromTemplate(tpl) };
 }
 
 export const dashboards = () => settings().dashboards || [];
@@ -72,13 +99,15 @@ function mutate(fn) {
   return out;
 }
 
-export function addDash(name) {
+export function addDash(name, tpl = "schreibtisch") {
   return mutate((list) => {
-    const d = starter(name || (list.length ? `Dashboard ${list.length + 1}` : "Schreibtisch"));
+    const d = starter(name || (list.some((x) => x.name === TEMPLATES[tpl]?.label) || tpl === "leer" ? `Dashboard ${list.length + 1}` : TEMPLATES[tpl]?.label || "Schreibtisch"), tpl);
     list.push(d);
     return d.id;
   });
 }
+/** Beide Ansichten eines Dashboards durch eine Vorlage ersetzen. */
+export const applyTemplate = (id, tpl) => mutate((list) => { const d = list.find((x) => x.id === id); if (d) d.views = fromTemplate(tpl); });
 export const removeDash = (id) => mutate((list) => { const i = list.findIndex((d) => d.id === id); if (i >= 0) list.splice(i, 1); });
 export const updateDash = (id, patch) => mutate((list) => { const d = list.find((x) => x.id === id); if (d) Object.assign(d, patch); });
 

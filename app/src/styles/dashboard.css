@@ -204,7 +204,31 @@
 .pk i { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; font-style: normal; background: color-mix(in srgb, var(--a) 16%, transparent); color: var(--a); }
 .pk i .icon { width: 16px; height: 16px; }
 .pk small { color: var(--warn); font-weight: 500; }
-.pk.used { color: var(--text-2); }
+/* Schon im Dashboard: in Kachelfarbe getönt, Rahmen und Haken (bzw. Anzahl) rechts */
+.pk.used { background: color-mix(in srgb, var(--a) 15%, var(--surface-2)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--a) 55%, transparent); padding-right: 6px; }
+.pk.used i { background: var(--a); color: var(--bg); }
+.pk-used-mark { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; background: var(--a, var(--text-2)); color: var(--bg); font: 700 12px var(--mono); }
+.pk-used-mark .icon { width: 13px; height: 13px; stroke-width: 3; }
+.pal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+.pal-key { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-2); --a: var(--text-2); }
+
+/* Vorlagen */
+.dash-tpl-page { display: grid; gap: var(--s4); align-content: start; }
+.dash-tpl-page > .hint { margin: 0; }
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: var(--s4); }
+.tpl-card { display: grid; gap: 6px; align-content: start; text-align: left; padding: var(--s4); border: 0; border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit;
+  transition: background .15s ease-out, box-shadow .15s ease-out; }
+.tpl-card:hover { background: var(--surface-2); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--focus) 60%, transparent); }
+.tpl-card:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.tpl-card b { font-size: var(--fs-lg); margin-top: var(--s2); }
+.tpl-card > span { color: var(--text-2); font-size: var(--fs-sm); line-height: 1.45; }
+.tpl-views { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tpl-views small { display: block; margin-top: 6px; font-size: var(--fs-xs); color: var(--text-2); }
+.tpl-mini { aspect-ratio: 16 / 9; display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: repeat(6, 1fr); gap: 3px; padding: 4px; border-radius: 8px; background: var(--bg); }
+.tpl-mini.alarm { background: color-mix(in srgb, var(--signal) 14%, var(--bg)); }
+.tpl-mini i { border-radius: 4px; background: color-mix(in srgb, var(--a) 30%, var(--surface-2)); color: var(--a); display: grid; place-items: center; min-width: 0; min-height: 0; }
+.tpl-mini i .icon { width: 14px; height: 14px; }
+.tpl-mini > span { grid-area: 1 / 1 / 7 / 13; display: grid; place-items: center; font-size: var(--fs-xs); color: var(--text-2); }
 .dash-new { margin: var(--s2) 4px 0; justify-content: flex-start; }
 .dash-new .icon { width: 16px; height: 16px; }
 .dash-settings { display: grid; gap: var(--s3); padding: var(--s3) 4px; }

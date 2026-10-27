@@ -1,0 +1,12 @@
+# Einfarbige LED des Wemos D1 mini an GPIO2 (D4), leuchtet bei LOW. Nur hell/dunkel und Blinkmuster.
+output:
+  - platform: esp8266_pwm
+    id: led_out
+    pin: { number: GPIO2, inverted: true }
+light:
+  - platform: monochromatic
+    id: status_led
+    internal: true
+    output: led_out
+    default_transition_length: 0s
+    restore_mode: ALWAYS_OFF

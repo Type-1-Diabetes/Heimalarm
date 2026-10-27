@@ -1,0 +1,171 @@
+/* Heimalarm – Anleitungen (PDF). Gleiche Farbwelt wie die App: „Leitstelle, lebendig“.
+   Dunkle Flächen, Signalrot nur für Alarm und Hauptaktion, jeder Bereich mit eigener Farbe,
+   weiche Ecken (8/12/16 px), Flächen statt Rahmenlinien. Gedruckt mit build.py (Chromium, A4). */
+@font-face { font-family: "Archivo"; src: url("../../../app/public/fonts/Archivo.ttf") format("truetype"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "JetBrains Mono"; src: url("../../../app/public/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; }
+
+:root {
+  --bg: #0e1013; --bg-2: #12151a; --surface: #171a1f; --surface-2: #1e2228; --surface-3: #262b34;
+  --line: #2c313a; --line-2: #22272f;
+  --text: #f1f2f4; --text-2: #b0b6c0;
+  --signal: #e5432f; --ok: #4cc287; --warn: #e9a945; --info: #7cb0e4;
+  --c-alarm: #e5432f; --c-net: #5b9cf0; --c-pc: #2fb9a8; --c-phone: #a78bfa; --c-people: #e9a945;
+  --c-voice: #4cc287; --c-safe: #f472b6; --c-app: #94a3b8; --c-routine: #a78bfa;
+  --r-sm: 8px; --r: 12px; --r-lg: 16px;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body { font: 10.5pt/1.5 "Archivo", system-ui, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3, h4, p { margin: 0; }
+b, strong { font-weight: 650; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+code { background: var(--surface-3); padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+
+/* ── Seite ── */
+.page {
+  width: 210mm; height: 297mm; padding: 15mm 15mm 18mm; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 5mm; page-break-after: always; break-after: page;
+  background: var(--bg);
+}
+.page:last-child { page-break-after: auto; break-after: auto; }
+.foot { position: absolute; left: 15mm; right: 15mm; bottom: 8mm; display: flex; justify-content: space-between; font-size: 8pt; color: var(--text-2); }
+.foot b { color: var(--text); font-weight: 600; }
+
+.head { display: flex; align-items: center; gap: 4mm; }
+.head h2 { font-size: 22pt; font-weight: 760; font-variation-settings: "wdth" 90; letter-spacing: -0.01em; line-height: 1.1; }
+.head .dur { margin-left: auto; font-size: 9pt; color: var(--text-2); background: var(--surface); padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
+.lead { font-size: 11.5pt; color: var(--text-2); max-width: 150mm; }
+.lead b { color: var(--text); }
+h3 { font-size: 12.5pt; font-weight: 680; }
+h4, h3.h4 { font-size: 10.5pt; font-weight: 650; }
+.muted { color: var(--text-2); }
+.small { font-size: 9pt; }
+
+/* ── Bausteine ── */
+.ico { width: 30px; height: 30px; border-radius: 9px; display: inline-grid; place-items: center; flex-shrink: 0;
+  background: color-mix(in srgb, var(--a, var(--text-2)) 17%, transparent); color: var(--a, var(--text-2)); }
+.ico svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ico.big { width: 44px; height: 44px; border-radius: 12px; }
+.ico.big svg { width: 24px; height: 24px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5mm; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3.5mm; }
+.card { background: var(--surface); border-radius: var(--r); padding: 4mm 4.5mm; display: grid; gap: 1.5mm; align-content: start; }
+.card .t { display: flex; align-items: center; gap: 2.5mm; font-weight: 650; font-size: 10.5pt; }
+.card p { color: var(--text-2); font-size: 9.5pt; }
+.card.accent { background: linear-gradient(150deg, color-mix(in srgb, var(--a) 14%, transparent), var(--surface) 60%); }
+.tag { font-size: 7.5pt; font-weight: 650; padding: 1px 8px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); margin-left: auto; }
+.tag.ok { color: var(--ok); background: rgb(76 194 135 / .14); }
+
+.callout { border-radius: var(--r); padding: 3.5mm 4.5mm; display: flex; gap: 3mm; align-items: flex-start; font-size: 9.5pt;
+  background: color-mix(in srgb, var(--a, var(--info)) 11%, var(--surface)); }
+.callout .ico { width: 26px; height: 26px; }
+.callout b:first-child { color: var(--a, var(--info)); }
+.callout.warn { --a: var(--warn); }
+.callout.bad { --a: var(--signal); }
+.callout.ok { --a: var(--ok); }
+.callout.info { --a: var(--c-net); }
+
+ul.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 1.6mm; }
+ul.list li { position: relative; padding-left: 5mm; }
+ul.list li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 6px; height: 6px; border-radius: 50%; background: var(--a, var(--signal)); }
+
+/* Nummerierte Schritte */
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 3mm; counter-reset: s; }
+ol.steps > li { display: grid; grid-template-columns: 9mm 1fr; gap: 3mm; align-items: start; counter-increment: s; }
+ol.steps > li::before { content: counter(s); width: 8mm; height: 8mm; border-radius: 50%; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--a, var(--signal)) 18%, transparent); color: var(--a, var(--signal)); font-weight: 750; font-size: 10pt; }
+ol.steps > li > div { display: block; padding-top: 1mm; }
+ol.steps .note { display: block; color: var(--text-2); font-size: 9pt; margin-top: 1mm; }
+ol.steps pre.code, ol.steps .box { margin-top: 1.5mm; }
+
+/* Menüpfad wie in der App */
+.path { display: inline-flex; align-items: center; gap: 4px; padding: 0 9px; border-radius: 999px; background: var(--surface-3);
+  font-weight: 600; font-size: 9pt; white-space: nowrap; line-height: 1.75; }
+.path i { font-style: normal; color: var(--text-2); }
+.btn { display: inline-block; padding: 0 9px; border-radius: 6px; background: var(--surface-3); font-weight: 650; font-size: 9pt; line-height: 1.75; white-space: nowrap; }
+.btn.red { background: #c42d21; color: #fff; }
+
+/* „Geklappt, wenn …“ */
+.done { display: flex; gap: 3mm; align-items: flex-start; padding: 3mm 4.5mm; border-radius: var(--r); background: rgb(76 194 135 / .10); font-size: 9.5pt; }
+.done::before { content: ""; flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%;
+  background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230e1013' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 12px no-repeat; }
+.done b:first-child { color: var(--ok); }
+
+pre.code { margin: 0; background: var(--bg-2); border-radius: var(--r-sm); padding: 3mm 4mm; font: 9pt/1.55 var(--mono); color: #d7dbe2; white-space: pre-wrap; }
+pre.code .c { color: var(--text-2); }
+
+/* Tabellen */
+table.t { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+table.t th { text-align: left; font-size: 8pt; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .05em; padding: 0 3mm 2mm 0; }
+table.t td { padding: 2.2mm 3mm 2.2mm 0; border-top: 1px solid var(--line-2); vertical-align: top; }
+table.t td:first-child { font-weight: 600; }
+table.t td.muted, table.t td .muted { color: var(--text-2); font-weight: 400; }
+.yes { color: var(--ok); font-weight: 600; }
+.no { color: var(--text-2); }
+.box { background: var(--surface); border-radius: var(--r); padding: 3mm 4.5mm; }
+
+/* Bilder */
+.shot { display: block; width: 100%; border-radius: var(--r); box-shadow: 0 0 0 1px var(--line-2); }
+figure { margin: 0; display: grid; gap: 1.5mm; }
+figcaption { font-size: 8.5pt; color: var(--text-2); }
+.phone-shot { width: 52mm; border-radius: 18px; box-shadow: 0 0 0 5px #1a1d22, 0 0 0 6px var(--line); }
+
+/* Zeitleiste */
+ol.tl { list-style: none; margin: 0; padding: 0; }
+ol.tl li { display: grid; grid-template-columns: 22mm 6mm 1fr; gap: 2mm; padding-bottom: 3.2mm; position: relative; }
+ol.tl li::after { content: ""; position: absolute; left: calc(22mm + 2mm + 3mm - 1px); top: 6mm; bottom: -0.5mm; width: 2px; background: var(--line); }
+ol.tl li:last-child::after { display: none; }
+ol.tl .when { font: 8.5pt var(--mono); color: var(--text-2); text-align: right; padding-top: 1px; }
+ol.tl .dot { width: 14px; height: 14px; border-radius: 50%; margin: 2px auto 0; border: 3px solid var(--bg); box-shadow: 0 0 0 2px var(--a, var(--text-2)); position: relative; z-index: 1; }
+ol.tl h3.h4 { margin-bottom: 0.6mm; }
+ol.tl p { color: var(--text-2); font-size: 9.5pt; }
+
+/* Ablauf-Grafik */
+.flow { display: grid; align-items: center; gap: 2.5mm; background: var(--surface); border-radius: var(--r-lg); padding: 5mm; }
+.flow .col { display: grid; gap: 2mm; }
+.flow .node { display: flex; align-items: center; gap: 2.5mm; background: var(--surface-2); border-radius: 10px; padding: 2.2mm 3mm; font-weight: 600; font-size: 9.5pt; }
+.flow .node small { display: block; font-weight: 400; color: var(--text-2); font-size: 8pt; }
+.flow .node.hub { background: color-mix(in srgb, var(--signal) 16%, var(--surface-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal) 45%, transparent); }
+.flow .arrow { color: var(--text-2); text-align: center; font-size: 14pt; }
+.flow .lab { font-size: 7.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
+
+/* Titelseite */
+.cover { justify-content: space-between; padding-top: 22mm;
+  background: radial-gradient(120% 70% at 100% 0%, rgb(229 67 47 / .22), transparent 55%), radial-gradient(90% 60% at 0% 100%, rgb(91 156 240 / .12), transparent 60%), var(--bg); }
+.cover .logo { width: 20mm; height: 20mm; }
+.cover h1 { font-size: 46pt; font-weight: 800; font-variation-settings: "wdth" 86; line-height: 0.98; letter-spacing: -0.02em; margin-top: 10mm; }
+.cover .sub { font-size: 14pt; color: var(--text-2); max-width: 135mm; margin-top: 6mm; }
+.cover .status { display: flex; align-items: center; gap: 5mm; background: var(--surface); border-radius: var(--r-lg); padding: 5mm 6mm; width: 120mm;
+  background-image: radial-gradient(90% 160% at 0% 0%, rgb(76 194 135 / .18), transparent 55%); }
+.cover .pulse { width: 15mm; height: 15mm; border-radius: 50%; background: rgb(76 194 135 / .16); display: grid; place-items: center; box-shadow: 0 0 0 2mm rgb(76 194 135 / .08); }
+.cover .pulse svg { width: 8mm; height: 8mm; stroke: var(--ok); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.cover .status b { font-size: 18pt; display: block; }
+.cover .pill { display: inline-flex; align-items: center; gap: 6px; font: 9pt var(--mono); background: var(--surface-3); padding: 2px 10px; border-radius: 999px; margin-top: 1.5mm; }
+.cover .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.cover .swatches { display: flex; gap: 2mm; }
+.cover .swatches span { width: 9mm; height: 2.2mm; border-radius: 2mm; background: var(--a); }
+.meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+.meta div { background: var(--surface); border-radius: var(--r); padding: 3.5mm 4.5mm; }
+.meta span { display: block; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); font-weight: 650; margin-bottom: 1mm; }
+
+/* Inhaltsverzeichnis */
+.toc { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5mm 6mm; }
+.toc a { display: flex; align-items: center; gap: 2.5mm; padding: 2mm 3mm; border-radius: 10px; background: var(--surface); color: var(--text); text-decoration: none; font-weight: 600; font-size: 9.5pt; }
+.toc a span:last-child { margin-left: auto; font: 8.5pt var(--mono); color: var(--text-2); }
+.toc .ico { width: 24px; height: 24px; border-radius: 7px; }
+.toc .ico svg { width: 14px; height: 14px; }
+
+.spacer { flex: 1; }
+.row { display: flex; gap: 4mm; align-items: flex-start; }
+
+/* Dichtere Kartenraster (viele kurze Karten) */
+.dense { gap: 2.5mm; }
+.dense .card { padding: 3mm 3.5mm; gap: 1mm; }
+.dense .card p { font-size: 8.8pt; line-height: 1.42; }
+
+/* Farbpunkt für die LED-Tabelle */
+.led-dot { display: inline-block; width: 2.6mm; height: 2.6mm; border-radius: 50%; background: var(--a); margin-right: 2mm; vertical-align: -.2mm; }
+table.t td .note { display: block; font-weight: 400; color: var(--text-2); font-size: 8.5pt; margin-top: .8mm; }

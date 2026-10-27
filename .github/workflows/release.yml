@@ -1,0 +1,142 @@
+# Release: baut Windows-Installer und Android-APK, wenn ein Tag v* gepusht wird.
+# Bewusst schlank: keine Tests, kein Linting – damit Bugfix-Releases schnell gehen.
+# Normale Commits/Pushes lösen nichts aus.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version für den Release (z. B. v0.1.0). Leer = nur bauen, kein Release."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+# Neuer Start bricht einen noch laufenden Build ab – spart Wartezeit bei schnellen Bugfixes.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults: { run: { working-directory: app } }
+    env:
+      # Optional: Code-Signatur (Secrets WINDOWS_CERTIFICATE = base64 einer .pfx, WINDOWS_CERTIFICATE_PASSWORD).
+      # Ohne Secrets wird wie bisher unsigniert gebaut – Windows SmartScreen warnt dann beim Setup.
+      WIN_CERT: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WIN_CERT_PASS: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm, cache-dependency-path: app/package-lock.json }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: app/src-tauri, cache-on-failure: true }
+      - run: npm ci --no-audit --no-fund
+      - name: Signierzertifikat (optional)
+        if: env.WIN_CERT != ''
+        shell: pwsh
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "cert.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WIN_CERT))
+          $pass = ConvertTo-SecureString $env:WIN_CERT_PASS -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pass
+          Remove-Item $pfx
+          @{ bundle = @{ windows = @{ certificateThumbprint = $cert.Thumbprint; digestAlgorithm = "sha256"; timestampUrl = "http://timestamp.digicert.com" } } } | ConvertTo-Json -Depth 5 | Set-Content src-tauri/signing.json
+      - name: Bauen
+        shell: pwsh
+        run: |
+          if (Test-Path src-tauri/signing.json) { npx tauri build --bundles nsis --config src-tauri/signing.json }
+          else { npx tauri build --bundles nsis }
+      # Prüfsumme für das Update in der App (<datei>.sha256)
+      - name: Prüfsumme
+        shell: pwsh
+        run: |
+          Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | ForEach-Object {
+            "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)" | Set-Content -NoNewline "$($_.FullName).sha256"
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          retention-days: 1   # nur Übergabe an den Release-Job; die Dateien liegen danach im Release
+          path: |
+            app/src-tauri/target/release/bundle/nsis/*.exe
+            app/src-tauri/target/release/bundle/nsis/*.exe.sha256
+
+  android:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: app } }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm, cache-dependency-path: app/package-lock.json }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: 17 }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: aarch64-linux-android }
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: app/src-tauri, cache-on-failure: true }
+      # Gradle-Abhängigkeiten zwischenspeichern (spart beim Android-Build Minuten)
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('app/plugins/heimalarm/android/build.gradle.kts', 'app/package-lock.json') }}
+          restore-keys: gradle-${{ runner.os }}-
+      - run: npm ci --no-audit --no-fund
+      - name: Android-Projekt erzeugen
+        run: |
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"   # auf dem Runner vorinstalliert
+          npx tauri android init --ci
+          # Eigene Launcher-Symbole (Logo, adaptiv) statt automatisch erzeugter
+          cp -r src-tauri/icons/android/. src-tauri/gen/android/app/src/main/res/
+          # targetSdk auf 36 halten: ab 37 sperrt Android 17 das Heimnetz, bis der Nutzer es erlaubt.
+          # Die Abfrage ist eingebaut (request_local_network) – Wert erst anheben, wenn auf einem Android-17-Gerät geprüft.
+          sed -i -E 's/targetSdk *= *[0-9]+/targetSdk = 36/' src-tauri/gen/android/app/build.gradle.kts
+          grep -n "targetSdk" src-tauri/gen/android/app/build.gradle.kts
+      # Fester Signierschlüssel aus dem Secret – derselbe wie bei den bisherigen Versionen, sonst lehnt Android Updates ab.
+      # Ohne Secret kein Release: eine APK mit anderem Schlüssel ließe sich nicht über die installierte App spielen.
+      - name: Signierschlüssel
+        env: { KEYSTORE: "${{ secrets.ANDROID_DEBUG_KEYSTORE }}" }
+        run: |
+          if [ -z "$KEYSTORE" ]; then echo "::error::Secret ANDROID_DEBUG_KEYSTORE fehlt – ohne festen Schlüssel gehen Updates nicht drüber."; exit 1; fi
+          mkdir -p ~/.android && echo "$KEYSTORE" | base64 -d > ~/.android/debug.keystore
+      # Release-Build: nicht debugbar (App-Daten lassen sich per USB nicht auslesen), verkleinert, ohne Web-Entwicklertools
+      - name: APK bauen (nur arm64, Release)
+        run: |
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"   # auf dem Runner vorinstalliert
+          npx tauri android build --apk --target aarch64
+      # Mit demselben Schlüssel wie bisher signieren (Alias/Passwörter wie beim Debug-Keystore) → Updates gehen drüber
+      - name: APK signieren
+        env: { VERSION: "${{ inputs.version || github.ref_name }}" }
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          UNSIGNED=$(find src-tauri/gen/android -name "*release-unsigned.apk" | head -1)
+          [ -n "$UNSIGNED" ] || { echo "::error::Keine unsignierte Release-APK gefunden"; exit 1; }
+          "$BT/zipalign" -f -p 4 "$UNSIGNED" aligned.apk
+          "$BT/apksigner" sign --ks ~/.android/debug.keystore --ks-key-alias androiddebugkey \
+            --ks-pass pass:android --key-pass pass:android --out "Heimalarm-${VERSION}.apk" aligned.apk
+          rm aligned.apk
+          sha256sum "Heimalarm-${VERSION}.apk" > "Heimalarm-${VERSION}.apk.sha256"
+      - uses: actions/upload-artifact@v7
+        with: { name: android, path: "app/Heimalarm-*.apk*", retention-days: 1 }
+
+  release:
+    needs: [windows, android]
+    if: startsWith(github.ref, 'refs/tags/') || inputs.version != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v8
+        with: { path: out, merge-multiple: true }
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: out/*
+          tag_name: ${{ inputs.version || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true

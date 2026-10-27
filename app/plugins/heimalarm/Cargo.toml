@@ -1,0 +1,13 @@
+[package]
+name = "tauri-plugin-heimalarm"
+version = "0.1.0"
+edition = "2021"
+links = "tauri-plugin-heimalarm"
+description = "Android-Funktionen für Heimalarm: Hintergrund-Dienst, Akku-Optimierung, Benachrichtigungen mitlesen"
+
+[dependencies]
+tauri = { version = "2" }
+serde = { version = "1", features = ["derive"] }
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }

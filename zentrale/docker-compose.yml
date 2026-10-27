@@ -1,0 +1,119 @@
+# Heimalarm – Zentrale (z. B. Raspberry Pi oder UGREEN-NAS)
+# Start ohne Zigbee:  docker compose up -d
+# Start mit Zigbee:   docker compose --profile zigbee up -d   (USB-Stick unten eintragen)
+# Licht für Alexa / Google Home zusätzlich:  docker compose --profile zigbee --profile matter up -d
+# Ohne Kommandozeile (z. B. UGOS-Docker-App): Profile in .env setzen, z. B. COMPOSE_PROFILES=zigbee
+#
+# Vorher: .env.example nach .env kopieren und MQTT_PASSWORD setzen. Ohne Passwort startet die Zentrale nicht
+# (sonst könnte jeder im WLAN Fehlalarme senden und mitlesen). Dasselbe Passwort in der App unter
+# Einstellungen → Verbindung und im ESP32 (secrets.yaml → mqtt_pw) eintragen.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # ESP32, Dienst
+      - "9001:9001"   # App (WebSocket)
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/data:/mosquitto/data
+    environment:
+      MQTT_USER: ${MQTT_USER:-heimalarm}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT_ESP_USER: ${MQTT_ESP_USER:-heimalarm-esp}
+      MQTT_ESP_PASSWORD: ${MQTT_ESP_PASSWORD:-}
+    # Passwort- und Rechtedatei aus .env erzeugen, dann Mosquitto starten.
+    # Hauptkonto: alles. Optionales ESP32-Konto: nur alarm/… und keine Firmware-Updates (alarm/+/ota) für andere.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -z "$$MQTT_PASSWORD" ]; then echo "Heimalarm: MQTT_PASSWORD fehlt in zentrale/.env – siehe .env.example" >&2; exit 1; fi
+        if [ -n "$$MQTT_ESP_PASSWORD" ] && [ "$$MQTT_ESP_USER" = "$$MQTT_USER" ]; then echo "Heimalarm: MQTT_USER und MQTT_ESP_USER sind gleich ($$MQTT_USER). MQTT_USER bleibt heimalarm – siehe .env.example" >&2; exit 1; fi
+        # Bei jedem Start neu anlegen (mosquitto_passwd -c überschreibt eine vorhandene Datei nicht mehr,
+        # sonst bliebe nach einer Passwortänderung in .env das alte Passwort gültig)
+        rm -f /mosquitto/data/passwd /mosquitto/data/acl
+        mosquitto_passwd -c -b /mosquitto/data/passwd "$$MQTT_USER" "$$MQTT_PASSWORD"
+        printf 'user %s\ntopic readwrite #\n' "$$MQTT_USER" > /mosquitto/data/acl
+        if [ -n "$$MQTT_ESP_PASSWORD" ]; then
+          mosquitto_passwd -b /mosquitto/data/passwd "$$MQTT_ESP_USER" "$$MQTT_ESP_PASSWORD"
+          printf '\nuser %s\ntopic read alarm/#\ntopic write alarm/+\ntopic write alarm/+/status\ntopic write alarm/+/debug\ntopic write alarm/+/+/+/state\ntopic readwrite homeassistant/#\ntopic readwrite esphome/#\n' "$$MQTT_ESP_USER" >> /mosquitto/data/acl
+        fi
+        chown mosquitto:mosquitto /mosquitto/data/passwd /mosquitto/data/acl
+        chmod 0700 /mosquitto/data/passwd /mosquitto/data/acl
+        exec mosquitto -c /mosquitto/config/mosquitto.conf
+
+  dienst:
+    build: ./dienst
+    restart: unless-stopped
+    network_mode: host   # für Wake-on-LAN und Matter (mDNS im Heimnetz)
+    environment:
+      MQTT_URL: mqtt://127.0.0.1:1883
+      MQTT_USER: ${MQTT_USER:-heimalarm}
+      MQTT_PASS: ${MQTT_PASSWORD:-}
+      WEBHOOK_PORT: "8080"
+      MATTER_PORT: "5540"               # Alarm-Sensoren für Alexa / Google Home – Alexa koppelt nur über 5540
+      MATTER_STORAGE: /app/data/matter  # Kopplungen bleiben bei Updates erhalten
+      TZ: Europe/Berlin
+    volumes:
+      - ./dienst/data:/app/data
+    depends_on: [mosquitto]
+
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:2
+    profiles: ["zigbee"]
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    ports:
+      - "8081:8080"   # Zigbee2MQTT-Weboberfläche (optional)
+    volumes:
+      - ./zigbee2mqtt:/app/data
+    devices:
+      - /dev/ttyUSB0:/dev/ttyACM0   # links: Pfad des Zigbee-Sticks anpassen
+    environment:
+      TZ: Europe/Berlin
+      ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto:1883
+      ZIGBEE2MQTT_CONFIG_MQTT_USER: ${MQTT_USER:-heimalarm}
+      ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      ZIGBEE2MQTT_CONFIG_SERIAL_PORT: /dev/ttyACM0
+      ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED: "true"
+      ZIGBEE2MQTT_CONFIG_FRONTEND_AUTH_TOKEN: ${MQTT_PASSWORD:-}   # Weboberfläche nur mit dem Zentralen-Passwort
+      ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED: "false"
+
+  # Gibt Zigbee-Lichter und -Gruppen per Matter an Alexa / Google Home weiter (lokal).
+  # Koppeln: Weboberfläche http://<zentrale>:8283 → QR-Code in der Alexa- bzw. Google-Home-App scannen.
+  # Im Zigbee2MQTT-Plugin der Matterbridge Benutzer und Passwort der Zentrale (.env) eintragen.
+  matterbridge:
+    image: luligu/matterbridge:latest
+    profiles: ["matter"]
+    restart: unless-stopped
+    network_mode: host   # Matter braucht mDNS im Heimnetz
+    # Achtung: Matterbridge belegt ebenfalls Port 5540 (wie die Alarm-Sensoren im Dienst). Alexa koppelt nur über 5540,
+    # beide zusammen gehen auf einer Zentrale also nicht mit Alexa.
+    stop_grace_period: 60s
+    volumes:
+      - ./matterbridge/plugins:/root/Matterbridge
+      - ./matterbridge/storage:/root/.matterbridge
+      - ./matterbridge/cert:/root/.mattercert
+    environment:
+      TZ: Europe/Berlin
+
+  # Nur zum Einrichten des ESP32: übersetzt esp32/*.yaml zu einer Firmware-Datei (.bin).
+  # Ordner esp32 (mit secrets.yaml) neben diese Datei legen. Oberfläche: http://<zentrale>:6052
+  # Anmeldung mit MQTT_USER / MQTT_PASSWORD aus .env. Nach dem Flashen wieder stoppen.
+  # UGOS-Docker-App: liest COMPOSE_PROFILES aus .env nicht immer – dann die Zeile „profiles“ hier löschen
+  # und neu bereitstellen. Der Container startet danach bei jedem Bereitstellen mit; nach dem Flashen stoppen.
+  esphome:
+    image: ghcr.io/esphome/esphome:stable
+    profiles: ["esphome"]
+    restart: "no"
+    ports:
+      - "6052:6052"
+    volumes:
+      - ./esp32:/config
+    environment:
+      TZ: Europe/Berlin
+      ESPHOME_USERNAME: ${MQTT_USER:-heimalarm}
+      ESPHOME_PASSWORD: ${MQTT_PASSWORD:-}

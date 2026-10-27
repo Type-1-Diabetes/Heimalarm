@@ -1,0 +1,44 @@
+[package]
+name = "heimalarm"
+version = "0.1.33"
+description = "Heimalarm"
+edition = "2021"
+
+[lib]
+name = "heimalarm_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-notification = "2"
+tauri-plugin-http = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-heimalarm = { path = "../plugins/heimalarm" }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-dialog = "2"
+
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+tauri-plugin-biometric = "2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_Foundation", "Win32_Security"] }
+# Alarmton nativ (spielt auch bei verstecktem Fenster), MP3/WAV/OGG/FLAC
+rodio = "0.20"
+# Windows Hello für die App-Sperre (gleiche Version wie Tauri, keine doppelte Kompilierung)
+windows = { version = "0.62", features = ["Security_Credentials_UI", "Foundation", "Win32_Foundation", "Win32_System_WinRT", "Win32_System_Com", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_Devices_Display", "Win32_Graphics_Gdi"] }
+windows-future = "0.3"
+
+# Schnelle Release-Builds: weniger Optimierung, dafür kürzere Build-Zeit.
+[profile.release]
+codegen-units = 16
+lto = false
+strip = true

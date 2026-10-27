@@ -1,0 +1,84 @@
+/* Heimalarm – Design-Tokens
+   Farbwelt "Leitstelle, lebendig": ruhige Flächen, Signalrot nur für Alarm und Hauptaktion,
+   jeder Bereich hat eine feste Farbe (Symbol, Balken, Zeitleiste). Flächen statt Rahmenlinien. */
+
+@font-face { font-family: "Archivo"; src: url("/fonts/Archivo.ttf") format("truetype"); font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-display: swap; }
+
+:root {
+  /* Farben – Dunkel (Standard) */
+  --bg: #0e1013;
+  --surface: #171a1f;
+  --bg-2: #12151a;          /* Navigation, linke Spalte */
+  --surface-2: #1e2228;
+  --surface-3: #262b34;     /* Knöpfe, Chips, Felder auf Karten */
+  --line: #2c313a;
+  --line-2: #22272f;        /* feine Trennlinien in Listen */
+  --text: #f1f2f4;
+  --text-2: #b0b6c0;
+  --signal: #e5432f;        /* Alarm, Hauptaktion */
+  --signal-ink: #ffffff;
+  --signal-soft: #3a1915;
+  --ok: #4cc287;
+  --ok-soft: #15291f;
+  --warn: #e9a945;
+  --warn-soft: #2e2413;
+  --info: #7cb0e4;
+  --info-soft: #172433;
+  --focus: #7cb0e4;
+  --shadow: none;
+  /* Bereichsfarben – immer dieselbe Farbe für denselben Bereich */
+  --c-alarm: #e5432f;
+  --c-net: #5b9cf0;
+  --c-pc: #2fb9a8;
+  --c-phone: #a78bfa;
+  --c-absent: #a78bfa;      /* Bereitschaft „Abwesend“ (Nicht verfügbar = --warn) */
+  --c-people: #e9a945;
+  --c-voice: #4cc287;
+  --c-safe: #f472b6;
+  --c-app: #94a3b8;
+  --c-routine: #a78bfa;
+  --c-discord: #8b93f8;
+  /* Dashboard: Farbe je Quelle */
+  --c-divera: #5b9cf0; --c-wehr: #e9a945; --c-haus: #2fb9a8; --c-extra: #94a3b8;
+
+  /* Typo – Mindestgröße 14 px für gute Lesbarkeit */
+  --font: "Archivo", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --fs-xs: 0.875rem;    /* 14 px – Metadaten, Labels */
+  --fs-sm: 0.9375rem;   /* 15 px – Hilfstexte */
+  --fs-md: 1rem;        /* 16 px – Fließtext */
+  --fs-lg: 1.25rem;     /* 20 px – Kartentitel */
+  --fs-xl: clamp(1.7rem, 1.3rem + 1.4vw, 2.2rem); /* Seitentitel */
+
+  /* Raum & Form */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  --radius: 12px;      /* Karten */
+  --radius-sm: 8px;    /* Knöpfe, Felder, Chips */
+  --radius-lg: 16px;   /* Status-Karte, Handy-Listen */
+  --nav-w: 84px;
+  --content-max: none;
+  /* Abstand zu Status- und Navigationsleiste: env() im Browser, --inset-* setzt die Android-App */
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--inset-bottom, 0px));
+  color-scheme: dark;
+}
+
+/* Android: bis die echten Werte vom Fenster da sind, sichere Mindestabstände
+   (Statusleiste ≈ 28 px, Navigationsleiste mit drei Knöpfen ≈ 48 px). */
+:root.is-android {
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--inset-top, 28px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--inset-bottom, 48px));
+}
+
+/* Hell – zweite Auswahl */
+:root[data-theme="light"] {
+  --bg: #f4f2ee; --bg-2: #ebe8e2; --surface: #ffffff; --surface-2: #f6f4f0; --surface-3: #ece9e3; --line: #e0dbd2; --line-2: #ebe7e0;
+  --c-alarm: #c42d21; --c-net: #2f6fc4; --c-pc: #12857a; --c-phone: #7454d6; --c-absent: #7454d6; --c-people: #a86b06; --c-voice: #22704a; --c-safe: #c2347f; --c-app: #5d6878; --c-routine: #7454d6; --c-discord: #4752c4; --c-divera: #2f6fc4; --c-wehr: #a86b06; --c-haus: #12857a; --c-extra: #5d6878;
+  --text: #16181d; --text-2: #4a505b;
+  --signal: #c42d21; --signal-soft: #fbe9e6;
+  --ok: #22704a; --ok-soft: #e4f1e9; --warn: #8a590d; --warn-soft: #fbf0dc;
+  --info: #2c5a88; --info-soft: #e7eef6; --focus: #2c5a88;
+  --shadow: 0 1px 2px rgb(22 24 29 / 6%), 0 4px 16px rgb(22 24 29 / 5%);
+  color-scheme: light;
+}

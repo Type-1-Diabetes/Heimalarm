@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-alarm-volume"
+description = "Enables the set_alarm_volume command without any pre-configured scope."
+commands.allow = ["set_alarm_volume"]
+
+[[permission]]
+identifier = "deny-set-alarm-volume"
+description = "Denies the set_alarm_volume command without any pre-configured scope."
+commands.deny = ["set_alarm_volume"]

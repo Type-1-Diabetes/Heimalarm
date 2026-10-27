@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-stop-torch"
+description = "Enables the stop_torch command without any pre-configured scope."
+commands.allow = ["stop_torch"]
+
+[[permission]]
+identifier = "deny-stop-torch"
+description = "Denies the stop_torch command without any pre-configured scope."
+commands.deny = ["stop_torch"]

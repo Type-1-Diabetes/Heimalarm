@@ -1,0 +1,149 @@
+/* Start: Status-Karte, Kennzahlen, Licht & Geräte, Schnellaktionen, Zuletzt.
+   PC und Handy zeigen dieselben Teile – am Handy untereinander. */
+.ico { width: 34px; height: 34px; border-radius: 10px; display: inline-grid; place-items: center; flex-shrink: 0;
+  background: color-mix(in srgb, var(--a, var(--text-2)) 16%, transparent); color: var(--a, var(--text-2)); }
+.ico .icon { width: 19px; height: 19px; }
+.link { color: var(--text-2); text-decoration: none; font-size: var(--fs-sm); font-weight: 600; }
+.link:hover { color: var(--text); }
+
+/* ── Status ── */
+.status-card {
+  --st: var(--ok);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s5); align-items: center;
+  padding: 20px 22px; border-radius: var(--radius-lg);
+  background: radial-gradient(90% 160% at 0% 0%, color-mix(in srgb, var(--st) 18%, transparent), transparent 55%), var(--surface);
+  transition: background .3s;
+}
+.status-card[data-st="wait"] { --st: var(--warn); }
+.status-card[data-st="off"] { --st: var(--text-2); }
+.st-pulse { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; position: relative;
+  background: color-mix(in srgb, var(--st) 16%, transparent); color: var(--st); }
+.st-pulse .icon { width: 28px; height: 28px; }
+.st-pulse::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--st) 35%, transparent); animation: st-pulse 2.4s cubic-bezier(.16, 1, .3, 1) infinite; }
+.status-card[data-st="off"] .st-pulse::after { animation: none; opacity: 0; }
+@keyframes st-pulse { from { transform: scale(.85); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
+.st-title { font-size: 1.6rem; font-weight: 750; font-variation-settings: "wdth" 90; }
+.st-actions { display: flex; gap: var(--s3); }
+.st-actions .btn { width: 140px; flex: none; }
+
+/* Pille: fester Platzhalter, Pille liegt darin – ihr Text verschiebt nichts */
+.stslot { position: relative; height: 28px; margin-top: 6px; min-width: 0; }
+.stpill {
+  position: absolute; left: 0; top: 0; height: 28px; width: fit-content; max-width: 100%;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px 0 10px; border: 0; border-radius: 999px;
+  background: var(--surface-3); color: var(--text);
+  font: 500 0.8125rem/28px var(--mono); white-space: nowrap; overflow: hidden;
+}
+.stpill i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--pc); }
+.stpill.ok { --pc: var(--ok); }
+.stpill.bad { --pc: var(--signal); }
+.stpill.wait { --pc: #f59e0b; width: min(100%, 380px); color: var(--text-2); }
+.stpill.wait i { animation: st-blink 1s steps(2) infinite; }
+.stpill > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.stpill b.ok { color: var(--ok); font-weight: 600; }
+.stpill b.bad { color: var(--signal); font-weight: 600; }
+.stpill .cur::after { content: "▍"; margin-left: 2px; animation: st-blink 1s steps(2) infinite; }
+@keyframes st-blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .st-pulse::after, .stpill i, .stpill .cur::after { animation: none; } }
+
+/* ── Kennzahlen ── */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3); }
+.kpi { border-radius: var(--radius); padding: 14px 16px; background: var(--surface); display: grid; gap: 2px; min-width: 0; }
+.kpi-l { font-size: var(--fs-xs); color: var(--text-2); }
+.kpi-n { font-size: 1.75rem; font-weight: 750; font-variation-settings: "wdth" 90; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.kpi-bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 8px; }
+.kpi-bar i { display: block; height: 100%; background: var(--a); border-radius: 4px; transition: width .4s cubic-bezier(.16, 1, .3, 1); }
+
+/* ── Spalten ── */
+.home-cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--s4); align-items: start; }
+.home-cols.single { grid-template-columns: minmax(0, 1fr); }
+.home-more { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); align-items: start; }
+.home-more:empty { display: none; }
+.panel { background: var(--surface); border-radius: var(--radius); padding: var(--s4); min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); margin-bottom: var(--s3); }
+.panel-head h3 { font-size: var(--fs-md); }
+
+/* Geräte-Kacheln */
+.devs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.dev { border: 0; border-radius: var(--radius); padding: 12px; background: var(--surface-2); display: grid; gap: 6px; text-align: left; color: var(--text); min-width: 0; transition: background .2s; }
+.dev.on { background: linear-gradient(160deg, color-mix(in srgb, var(--warn) 22%, transparent), var(--surface-2) 70%); }
+.dev-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.dev b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev small { color: var(--text-2); font-size: var(--fs-xs); }
+.sw { width: 40px; height: 24px; border-radius: 999px; background: var(--line); position: relative; flex-shrink: 0; transition: background .15s; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.sw.on { background: var(--ok); }
+.sw.on::after { transform: translateX(16px); }
+
+/* Schnellaktionen */
+.quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.q { border: 0; border-radius: var(--radius); padding: 10px 12px; background: var(--surface-2); display: flex; gap: 10px; align-items: center; font-weight: 620; color: var(--text); text-align: left; min-width: 0; }
+.q:hover, button.dev:hover { background: var(--surface-3); }
+.q .ico { width: 30px; height: 30px; }
+.q > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Zeitleiste */
+.tl { list-style: none; margin: 0; padding: 0; }
+.tl li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 10px; padding: 7px 0; position: relative; }
+.tl li::before { content: ""; position: absolute; left: 6px; top: 24px; bottom: -7px; width: 2px; background: var(--line); }
+.tl li:last-child::before { display: none; }
+.tl li > i { width: 14px; height: 14px; border-radius: 50%; margin-top: 4px; border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--a); }
+.tl b { font-weight: 620; display: block; }
+.tl small { display: block; color: var(--text-2); font-size: var(--fs-xs); }
+.tl time { color: var(--text-2); font-size: var(--fs-xs); }
+
+/* ── Handy: alles untereinander, gleiche Teile wie am PC ── */
+@media (max-width: 1100px) { .home-cols { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .status-card { grid-template-columns: auto minmax(0, 1fr); gap: var(--s3) var(--s4); padding: 16px; }
+  .st-pulse { width: 46px; height: 46px; }
+  .st-pulse .icon { width: 22px; height: 22px; }
+  .st-title { font-size: 1.3rem; }
+  .stpill.wait { width: 100%; }
+  .st-actions { grid-column: 1 / -1; }
+  .st-actions .btn { width: auto; flex: 1 1 0; min-width: 0; padding: 0 8px; white-space: normal; line-height: 1.15; }
+  .kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpi-n { font-size: 1.5rem; }
+  .devs { grid-template-columns: 1fr 1fr; }
+  .quick { grid-template-columns: 1fr 1fr; }
+}
+
+/* Bereitschaft in der Status-Karte: drei Knöpfe in Knopfform, jede Stufe mit eigener Farbe */
+.status-card[data-ready="away"] { --st: var(--warn); }
+.status-card[data-ready="absent"] { --st: var(--c-absent); }
+.st-ready { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line-2); }
+.st-ready-label { font-size: var(--fs-xs); font-weight: 650; color: var(--text-2); }
+.ready-pick { display: inline-flex; gap: 3px; padding: 3px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.ready-pick button { --m: var(--ok); min-height: 38px; padding: 0 16px; border: 0; border-radius: calc(var(--radius-sm) - 2px); background: transparent; color: var(--text-2); font-weight: 600; white-space: nowrap; transition: background .15s, color .15s; }
+.ready-pick button[data-mode="away"] { --m: var(--warn); }
+.ready-pick button[data-mode="absent"] { --m: var(--c-absent); }
+.ready-pick button:hover { color: var(--text); }
+.ready-pick button[aria-pressed="true"] { background: color-mix(in srgb, var(--m) 18%, var(--surface-2)); color: var(--m); }
+.st-ready-hint { font-size: var(--fs-sm); color: var(--text-2); flex: 1 1 260px; }
+@media (max-width: 760px) {
+  .st-ready { gap: var(--s2); }
+  .ready-pick { width: 100%; }
+  .ready-pick button { flex: 1 1 auto; padding: 0 6px; font-size: var(--fs-xs); }
+}
+
+/* Auswahl „bis wann?“ (ui/until-picker.js) */
+.until-presets { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.until-pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s5); align-items: start; }
+.cal { display: grid; gap: var(--s2); }
+.cal-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-nav { min-height: 38px; width: 38px; padding: 0; }
+.cal-nav svg.icon { width: 18px; height: 18px; }
+.cal-month { font-weight: 650; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.cal-wd { text-align: center; font-size: var(--fs-xs); color: var(--text-2); padding: 4px 0; }
+.cal-day { min-height: 38px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 550; }
+.cal-day:hover:not(:disabled) { background: var(--surface-3); }
+.cal-day.today { box-shadow: inset 0 0 0 1px var(--line); }
+.cal-day[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+.cal-day:disabled { color: color-mix(in srgb, var(--text-2) 45%, transparent); }
+.until-time { display: grid; gap: 6px; font-size: var(--fs-xs); font-weight: 650; color: var(--text-2); }
+.until-time .input { width: 120px; font-size: 1.1rem; }
+.until-sum { margin: 0; font-weight: 600; }
+.until-sum.bad { color: var(--signal); }
+.row.end { justify-content: flex-end; }
+@media (max-width: 560px) { .until-pick { grid-template-columns: 1fr; } .until-time .input { width: 100%; } }

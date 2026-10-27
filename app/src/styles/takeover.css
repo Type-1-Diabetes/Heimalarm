@@ -1,0 +1,50 @@
+/* "Fährst du?" – Vollbild über allem */
+.takeover {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center; overflow-y: auto;
+  padding: calc(var(--s5) + var(--safe-top)) var(--s5) calc(var(--s5) + var(--safe-bottom));
+  background: radial-gradient(120% 90% at 50% 0%, #2a0d0a 0%, #0e1013 60%);
+  color: #fff; animation: to-in .18s ease-out;
+}
+/* Lagebild: links Abfrage, rechts Eingang + Routinen (Handy: darunter) */
+.takeover .lage { width: min(1100px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s6, 48px); align-items: center; }
+.takeover .lage:has(.side[hidden]) { grid-template-columns: minmax(0, 1fr); width: min(640px, 100%); }
+.takeover .box { display: grid; gap: var(--s4); text-align: left; justify-items: start; }
+.takeover .side { align-self: stretch; display: grid; align-content: center; gap: var(--s5); padding: var(--s5); border-radius: var(--radius); background: rgb(255 255 255 / 5%); }
+.takeover .side h2 { font-size: var(--fs-sm); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #aeb3bb; margin: 0 0 var(--s2); }
+.takeover .side ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.takeover .side li { display: flex; justify-content: space-between; gap: var(--s3); font-size: var(--fs-md); }
+.takeover .side .mono { font-family: var(--mono); color: #c9cdd4; font-variant-numeric: tabular-nums; }
+.takeover .side li.run { justify-content: flex-start; align-items: center; gap: 10px; }
+.takeover .side li.run::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
+.takeover .count { display: flex; align-items: center; gap: var(--s4); width: 100%; }
+.takeover .count-num { font-family: var(--mono); font-size: 3.6rem; font-weight: 500; font-variant-numeric: tabular-nums; min-width: 2.2ch; }
+.takeover .count-bar { flex: 1; display: grid; gap: 6px; }
+.takeover .count-track { height: 10px; border-radius: 999px; background: rgb(255 255 255 / 12%); overflow: hidden; }
+.takeover .count-track i { display: block; height: 100%; border-radius: inherit; background: var(--signal); transition: width 1s linear; }
+.takeover .count-bar small { color: #c9cdd4; font-size: var(--fs-sm); }
+.takeover kbd { font-family: var(--mono); font-size: var(--fs-xs); font-weight: 500; opacity: .7; margin-left: 10px; }
+@media (max-width: 860px) {
+  .takeover .lage { grid-template-columns: minmax(0, 1fr); }
+  .takeover .box { text-align: center; justify-items: center; }
+}
+.takeover .tag { font-size: var(--fs-sm); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #ff9a90; }
+.takeover h1 { font-size: clamp(2.6rem, 2rem + 4vw, 4.6rem); font-variation-settings: "wdth" 88; font-weight: 800; letter-spacing: -0.02em; }
+.takeover .meta { color: #c9cdd4; font-size: var(--fs-md); }
+.ring { --p: 1; width: 132px; height: 132px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(var(--signal) calc(var(--p) * 360deg), rgb(255 255 255 / 12%) 0); }
+.ring span { width: 112px; height: 112px; border-radius: 50%; background: #12151a; display: grid; place-items: center; font-size: 2.6rem; font-weight: 760; font-variant-numeric: tabular-nums; }
+.takeover .actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); width: 100%; }
+.takeover .btn { min-height: 72px; font-size: 1.2rem; border-radius: var(--radius); }
+.takeover .btn.primary { background: #e5432f; border-color: #e5432f; }
+.takeover .btn.secondary { background: transparent; color: #fff; border: 2px solid rgb(255 255 255 / 55%); }
+.takeover .btn.secondary:hover { background: rgb(255 255 255 / 8%); }
+.takeover .note { color: #c9cdd4; font-size: var(--fs-sm); }
+.takeover .keys { font-family: var(--mono); font-size: var(--fs-xs); color: #aeb3bb; }
+@media (max-width: 480px) { .takeover .actions { grid-template-columns: 1fr; } }
+@keyframes to-in { from { opacity: 0; transform: scale(1.02); } }
+.takeover .meta-big { font-size: clamp(1.4rem, 1rem + 1.6vw, 2.2rem); color: #fff; font-weight: 750; line-height: 1.15; }
+.takeover .btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+/* Melder zuerst: Platzhalter, bis Stichwort und Ort aus der Alarm-App kommen */
+.takeover .meta-big.pending { opacity: .7; font-style: italic; }

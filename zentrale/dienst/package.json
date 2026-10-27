@@ -1,0 +1,23 @@
+{
+  "name": "heimalarm-dienst",
+  "version": "0.2.10",
+  "description": "Heimalarm-Dienst: Routinen, Webhook, Protokoll, Selbsttest",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "devbroker": "node tools/devbroker.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@matter/main": "^0.15.6",
+    "@project-chip/matter.js": "^0.15.6",
+    "mqtt": "^5.16.1",
+    "suncalc": "^1.9.0"
+  },
+  "devDependencies": {
+    "aedes": "^1.2.0",
+    "ws": "^8.22.0"
+  },
+  "type": "module",
+  "private": true
+}

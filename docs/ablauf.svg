@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 380" width="1000" height="380" role="img" aria-label="Ablauf: Melder und Alarm-Apps melden an die Zentrale, die PC, Handy, Licht und Sprachassistenten auslöst">
+  <style>
+    .bg{fill:#0e1013}.box{fill:#171a1f;stroke:#2c313a;stroke-width:1.5}.hub{fill:#1d1414;stroke:#e5432f;stroke-width:2}
+    .t{font:600 16px system-ui,-apple-system,"Segoe UI",sans-serif;fill:#f1f2f4}.s{font:400 13px system-ui,-apple-system,"Segoe UI",sans-serif;fill:#9aa1ad}
+    .h{font:600 12px system-ui,-apple-system,"Segoe UI",sans-serif;fill:#9aa1ad;letter-spacing:.04em}
+    .a{stroke:#e5432f;stroke-width:2.5;fill:none}.b{stroke:#7cb0e4;stroke-width:2;fill:none;stroke-dasharray:6 5}.o{stroke:#4cc287;stroke-width:2;fill:none}
+    .dot{fill:#e5432f}
+    @media (prefers-color-scheme: light){.bg{fill:#f6f6f4}.box{fill:#fff;stroke:#d9dbe0}.hub{fill:#fdf0ee}.t{fill:#16181c}.s,.h{fill:#5b6270}}
+  </style>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#e5432f"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4cc287"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7cb0e4"/></marker>
+  </defs>
+  <rect class="bg" width="1000" height="380" rx="4"/>
+  <text class="h" x="28" y="34">ALARM KOMMT AN</text><text class="h" x="500" y="34">MIT ZENTRALE</text><text class="h" x="752" y="34">ZUHAUSE PASSIERT</text>
+
+  <rect class="box" x="28" y="52" width="190" height="72" rx="3"/><text class="t" x="46" y="83">Melder</text><text class="s" x="46" y="104">Relais der Ladeschale</text>
+  <rect class="box" x="268" y="52" width="170" height="72" rx="3"/><text class="t" x="286" y="83">ESP32</text><text class="s" x="286" y="104">meldet per WLAN</text>
+  <path class="a" d="M218 88H264" marker-end="url(#ar)"/><path class="a" d="M438 88H496" marker-end="url(#ar)"/>
+
+  <rect class="box" x="28" y="214" width="190" height="96" rx="3"/><text class="t" x="46" y="245">Alarm-Apps</text><text class="s" x="46" y="267">SYBOS · aPager PRO</text><text class="s" x="46" y="286">Divera 24/7</text>
+  <rect class="box" x="268" y="214" width="170" height="96" rx="3"/><text class="t" x="286" y="245">Heimalarm</text><text class="s" x="286" y="267">am Handy liest mit,</text><text class="s" x="286" y="286">Divera per API</text>
+  <path class="a" d="M218 262H264" marker-end="url(#ar)"/><path class="a" d="M438 262H496" marker-end="url(#ar)"/>
+  <path class="b" d="M123 310V346H600V318" marker-end="url(#ab)"/><text class="s" x="140" y="340">aPager-Webhook direkt an die Zentrale</text>
+
+  <rect class="hub" x="500" y="52" width="200" height="262" rx="3"/>
+  <text class="t" x="520" y="84">Zentrale</text><text class="s" x="520" y="102">NAS oder Raspberry Pi</text>
+  <text class="s" x="520" y="128">Mosquitto · Verteiler</text>
+  <text class="s" x="520" y="150">Dienst · Routinen</text>
+  <text class="s" x="520" y="172">Zigbee2MQTT · Licht</text>
+  <text class="s" x="520" y="194">Matter · Alexa, Google</text>
+  <circle class="dot" cx="520" cy="226" r="4"/><text class="s" x="532" y="230">läuft auch, wenn PC</text><text class="s" x="532" y="249">und Handy aus sind</text>
+
+  <rect class="box" x="752" y="52" width="220" height="56" rx="3"/><text class="t" x="770" y="77">PC</text><text class="s" x="770" y="97">„Fährst du?“ · Ruhezustand</text>
+  <rect class="box" x="752" y="120" width="220" height="56" rx="3"/><text class="t" x="770" y="145">Handy</text><text class="s" x="770" y="165">Meldung · Rückmeldung</text>
+  <rect class="box" x="752" y="188" width="220" height="56" rx="3"/><text class="t" x="770" y="213">Licht &amp; Geräte</text><text class="s" x="770" y="233">Zigbee und WLAN</text>
+  <rect class="box" x="752" y="256" width="220" height="56" rx="3"/><text class="t" x="770" y="281">Alexa &amp; Google</text><text class="s" x="770" y="301">Matter oder Voice Monkey</text>
+  <path class="o" d="M700 80H748" marker-end="url(#ag)"/><path class="o" d="M700 148H748" marker-end="url(#ag)"/><path class="o" d="M700 216H748" marker-end="url(#ag)"/><path class="o" d="M700 284H748" marker-end="url(#ag)"/>
+</svg>

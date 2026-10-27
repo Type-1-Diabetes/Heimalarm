@@ -1,0 +1,22 @@
+<section class="page" data-title="{{doc}}" id="{{id}}">
+  <div class="head"><span class="ico big" style="--a:var(--c-pc)">{{i:pc}}</span><h2>{{schritt}} · Heimalarm am PC</h2><span class="dur">5 min pro PC</span></div>
+  <p class="lead">Auf jedem PC und Laptop, der bei Alarm reagieren soll. Beliebig viele.</p>
+  <ol class="steps" style="--a:var(--c-pc)">
+    <li><div><b>Programm laden:</b> <span class="mono">github.com/Type-1-Diabetes/Heimalarm/releases</span> → neueste Version → <code>Heimalarm_…_x64-setup.exe</code></div></li>
+    <li><div><b>Installieren:</b> Datei öffnen. Zeigt Windows „Der Computer wurde durch Windows geschützt“: <span class="btn">Weitere Informationen</span> → <span class="btn">Trotzdem ausführen</span><span class="note">Das kommt, weil das Programm (noch) nicht kostenpflichtig signiert ist.</span></div></li>
+    <li><div><b>Firewall:</b> Fragt Windows nach dem Netzwerkzugriff, <b>Private Netzwerke</b> erlauben.</div></li>
+    <li><div><b>Betrieb und Verbindung:</b> <span class="path">Einstellungen <i>›</i> Betrieb &amp; Koppeln</span> → <b>Mit Zentrale</b>, dann unter <span class="path">Einstellungen <i>›</i> Zentrale</span> eintragen:
+      <div class="box" style="margin-top:1mm"><table class="t">
+        <tr><td style="width:30mm">Adresse</td><td class="muted">IP der Zentrale aus Schritt 2, z. B. <code>192.168.178.43</code></td></tr>
+        <tr><td>Port</td><td class="muted"><code>9001</code></td></tr>
+        <tr><td>Benutzer</td><td class="muted"><code>heimalarm</code></td></tr>
+        <tr><td>Passwort</td><td class="muted">dein <code>MQTT_PASSWORD</code></td></tr>
+      </table></div>
+      <span class="note">→ <span class="btn">Speichern &amp; verbinden</span></span></div></li>
+    <li><div><b>Alarmquelle und Kennung:</b> <span class="path">Einstellungen <i>›</i> Alarmquellen</span> → <b>Melder</b> einschalten. Unter <span class="path">Kennung &amp; Sperrzeit</span> <b>Meine Kennung</b> = <code>ich</code> – genau wie {{kennung}}.</div></li>
+    <li><div><b>Was der PC tun soll:</b> <span class="path">Einstellungen <i>›</i> „Fährst du?“</span>. Standard: „Fährst du?“ mit 30 s Countdown, danach Ruhezustand.</div></li>
+    <li><div><b>Wie laut:</b> im selben Bereich Ton wählen (Melder-Ton oder eigene MP3/WAV) und <span class="btn">Ton testen</span>. Heimalarm zeigt dazu die Windows-Lautstärke – auf Wunsch hebt es sie bei Alarm an.</div></li>
+  </ol>
+  <div class="done"><div><b>Geklappt, wenn</b> Start oben <b>Aktiv</b> mit grüner Pille <b>Verbunden</b> zeigt.</div></div>
+  <div class="callout info"><span class="ico" style="--a:var(--c-people)">{{i:people}}</span><div><b>Gemeinsamer PC?</b> Soll ein PC bei mehreren Personen ausgehen: <span class="path">Dieser PC</span> → „Abfrage auch bei Alarm von“ die weiteren Kennungen eintragen. Mehrere Bildschirme zeigen die Abfrage alle gleichzeitig.</div></div>
+</section>

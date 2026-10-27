@@ -1,0 +1,35 @@
+# Node / Vite
+node_modules/
+app/dist/
+
+# Tauri / Rust
+app/src-tauri/target/
+app/src-tauri/gen/
+
+# Geheimnisse
+esp32/secrets.yaml
+esp32/.esphome/
+zentrale/mosquitto/data/
+zentrale/mosquitto/passwd
+zentrale/zigbee2mqtt/
+*.keystore
+*.jks
+.env
+
+# System
+.DS_Store
+Thumbs.db
+zentrale/dienst/data/
+zentrale/matterbridge/
+zentrale/.env
+
+# Python
+__pycache__/
+*.pyc
+app/src-tauri/signing.json
+
+# Kopie des ESP32-Ordners auf der Zentrale (Raspberry Pi: cp -r ../esp32 ./esp32) – enthält secrets.yaml
+zentrale/esp32/
+
+# Impeccable: lokale Prüf-Screenshots
+.impeccable/review/

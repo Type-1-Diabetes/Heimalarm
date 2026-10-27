@@ -1,0 +1,5 @@
+/* Dashboard-Fenster (tv.html). Bewusst eine Datei statt <style> im HTML: Für jeden <style>-Block setzt Tauri
+   eine Nonce in die CSP, dann gilt 'unsafe-inline' nicht mehr und die style-Attribute der Kacheln
+   (Position im Raster) werden blockiert. */
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+#tv { width: 100vw; height: 100vh; }

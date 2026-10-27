@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile",
+  "description": "Nur Handy: App-Sperre per Fingerabdruck",
+  "platforms": ["android", "iOS"],
+  "windows": ["main"],
+  "permissions": ["biometric:default"]
+}

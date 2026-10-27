@@ -4,7 +4,8 @@
   "description": "Rechte der Oberfläche",
   "windows": [
     "main",
-    "takeover-*"
+    "takeover-*",
+    "tv-*"
   ],
   "permissions": [
     "core:default",

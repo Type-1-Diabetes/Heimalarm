@@ -140,6 +140,9 @@ export const defaults = {
   },
   // Zusatzfunktionen – bewusst aus, bis man sie einschaltet
   features: { logbuch: false, stats: false },
+  // TV-Dashboards (nur dieser PC): [{ id, name, monitor, on, alarmSwitch, backMin, views: { ruhe: [Kachel], alarm: [Kachel] } }]
+  // Kachel: { id, type, x, y, w, h, opts } im Raster 12 × 6 (x, y ab 0). core/dashboard.js
+  dashboards: [],
   // Einrichtungs-Assistent (nur dieses Gerät): Fortschritt, Antworten, von Hand abgehakte Schritte. core/wizard.js
   wizard: { done: false, step: 0, answers: { src: [], act: [], always: "nein" }, ok: {} },
 };

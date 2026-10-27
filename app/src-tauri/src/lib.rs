@@ -139,6 +139,7 @@ mod discord;
 mod hotkeys;
 mod sound;
 mod takeover;
+mod tv;
 
 /// Nur Dateien aus den eigenen GitHub-Releases werden geladen.
 /// Alter Accountname (vor der Umbenennung) bleibt erlaubt.
@@ -392,6 +393,8 @@ pub fn run() {
             sound::system_volume_set,
             takeover::takeover_open,
             takeover::tray_status,
+            tv::tv_screens,
+            tv::tv_open,
             discord::discord_set,
             discord::discord_clear,
             discord::discord_running,

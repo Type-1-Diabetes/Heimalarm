@@ -1,6 +1,6 @@
 # Dashboard (TV-Vollbild) – Plan
 
-Stand: 27.10.2026 · Status: Mockup fertig (`docs/mockups/dashboard.html`), Abstimmung läuft
+Stand: 27.10.2026 · Status: gebaut (Editor, TV-Fenster, alle Kacheln) – Test am echten Windows-PC und mit echtem Divera-Schlüssel offen
 
 ## Entscheidungen
 
@@ -56,3 +56,54 @@ Offen: genaue Divera-Feldnamen prüfen (offizielle Doku war aus der Entwicklungs
 
 1. Mockup-Datei (1:1, statisch) → Design und Layout abstimmen
 2. Danach: Umsetzung in der App
+
+## Bau-Log
+
+### Schritt 1 – Datenmodell (`app/src/core/dashboard.js`)
+- Dashboards liegen in `settings.dashboards`, nur auf diesem PC (kein Abgleich mit dem Handy).
+- Je Dashboard zwei Ansichten `ruhe` und `alarm`, Kacheln `{ id, type, x, y, w, h, opts }` im Raster 12 × 6.
+- Neues Dashboard startet mit dem Aufbau aus dem Mockup. Überlappen und Kacheln außerhalb des Rasters werden verhindert, jede Kachelart hat eine Mindestgröße.
+
+### Schritt 2 – Divera-Daten (`app/src/core/divera-board.js`, `refreshBoard()` in `divera.js`)
+- Quelle: `/api/v2/pull/all`, dazu `/api/v2/alarms` für die Rückmeldungen (fällt still weg, wenn der Schlüssel es nicht darf).
+- Feldnamen **ungeprüft gegen echte Daten** (Doku nicht erreichbar), übernommen aus DiveraControl und kp-front:
+  `cluster.consumer` (Namen), `cluster.vehicle[].fmsstatus_id`, `monitor["1"][status].all`, `events`/`news` als `{ items, sorting }`, `alarm.items[].ucr_answered { status: { ucr: { ts } } }`, `ucr_addressed`.
+- Absage wird am Statusnamen erkannt („nicht“, „kein“, „abwesend“, „verhindert“) – „Komme nicht“ zählt also nicht als Zusage.
+- **Zu prüfen mit echtem Schlüssel:** Kommen Namen, Fahrzeuge und Verfügbarkeit an? Sonst Feldnamen in `divera-board.js` anpassen.
+
+### Schritt 3 – Kacheln (`core/board.js`, `ui/tiles.js`, `styles/dashboard.css`)
+- `core/board.js` sammelt alles in einem Schnappschuss (läuft nur im Hauptfenster): Alarm, Haushalt-Antworten, Bereitschaft, Systemstatus, Divera, Logbuch, Statistik, Protokoll, Geräte, Routinen, Wetter.
+- Ein Einsatz gilt fürs Dashboard als laufend ab Alarm (eigener oder Person im Haushalt) bis „Einsatz beenden“ oder „Zurück nach“ (Minuten).
+- Wetter: Bright Sky (`api.brightsky.dev`, DWD-Daten, ohne Schlüssel), Standort aus `shared.location` (Einstellungen → Zentrale → Standort). Abfrage nur, wenn eine Wetter-Kachel existiert und ein Dashboard läuft.
+- Divera wird fürs Dashboard alle 60 s geholt, bei Alarm alle 15 s (Rückmeldungen) – nur solange Editor oder TV-Fenster offen sind.
+- Raster immer 1920 × 1080, per `transform: scale` aufs Fenster gebracht → Editor-Vorschau = TV-Bild.
+- Kacheln passen ihren Inhalt an die Größe an (Zeilenzahl aus der Höhe, einzeilige Uhr/Wetter ohne Kopfzeile).
+- Getestet mit Beispieldaten im Browser: keine Fehler, kein Überlauf (Ruhe, Alarm, hell, dunkel).
+
+### Schritt 4 – TV-Fenster (`tv.html`, `src/tv.js`, `core/tvlink.js`, `src-tauri/src/tv.rs`)
+- Gleiches Muster wie „Fährst du?“ auf Zweitbildschirmen: Das Hauptfenster hält Verbindung und Logik, das TV-Fenster zeichnet nur. Keine zweite App-Instanz, also keine doppelten Divera-Abfragen und kein Port-Konflikt.
+- Rust-Befehle `tv_screens` (Bildschirme mit festem Schlüssel aus Position) und `tv_open(id, screen, on)` (randlos, Vollbild, nicht in der Taskleiste). Fehlt der gewählte Bildschirm, nimmt es den ersten, der nicht der Hauptbildschirm ist.
+- Events: `tv-state` (Schnappschuss + Dashboards + Alarm-Ansicht ja/nein), `tv-action` (Bedienung), `tv-ready`.
+- Mauszeiger auf dem TV ausgeblendet, bei Bewegung 3 s sichtbar.
+- Bekannt: Bei Alarm legt sich „Fährst du?“ (Countdown) auch über den TV-Bildschirm. Danach erscheint die Alarm-Ansicht. Absichtlich so gelassen.
+- `cargo check` grün (Linux; Windows-spezifischer Code unverändert).
+
+### Schritt 5 – Editor (`views/dashboard.js`, Menüpunkt „Dashboard“, nur Windows-Programm)
+- Links: Dashboards, darunter Anzeige (Name, Bildschirm, „Auf dem Bildschirm zeigen“, „Bei Alarm umschalten“, „Zurück nach“, Löschen).
+- Mitte: Umschalter Ruhe/Alarm, Vorschau = echtes TV-Bild (Alarm-Ansicht mit Beispiel-Einsatz), darüber Bearbeitungsebene: freie Felder gestrichelt, Kachel ziehen = verschieben, Ecke = Größe, Palette per Klick oder Ziehen.
+- Tastatur: Pfeile verschieben, Umschalt + Pfeile ändern die Größe, Entf entfernt.
+- Rechts: gewählte Kachel – Größe, Inhalt (Notiz: Überschrift/Text, Bild: Datei, auf 600 px verkleinert), „Auch in Ruhe/Alarm“, Entfernen.
+- „Alarm-Ansicht testen“ schaltet die TV-Fenster 60 s auf einen Beispiel-Einsatz (ohne „Fährst du?“, ohne Zentrale-Aktionen).
+- Beim Hinzufügen: Standardgröße, sonst die größte, die noch frei ist.
+- Uhr und Notiz wachsen mit der Kachelgröße.
+
+### Schritt 6 – Prüfung
+- Getestet im Browser mit nachgebildetem Tauri: Editor (anlegen, wählen, Entf, hinzufügen, Größe per Tastatur und Ziehen), TV-Fenster (Zustand empfangen, skalieren, hell/dunkel, Knopf schickt Aktion). Keine Fehler in der Konsole.
+- `vite build`, `oxlint` (keine neuen Hinweise), `cargo check` grün.
+- Design-Detektor: nur der blinkende ALARM-Punkt (gewollt, aus bei „Bewegung reduzieren“).
+
+## Offen / beim ersten echten Einsatz prüfen
+1. Am Windows-PC: Öffnet das TV-Fenster auf dem richtigen Bildschirm im Vollbild? Startet es nach einem Neustart von Heimalarm wieder?
+2. Mit echtem Divera-Schlüssel: Namen bei Rückmeldungen, Verfügbarkeit, Fahrzeuge, Termine, Mitteilungen (Feldnamen siehe Schritt 2).
+3. Wetter: Standort unter Einstellungen → Zentrale → Standort muss stimmen.
+4. Nicht gebaut (bewusst): Einsatzkarte, Fahrzeit zum Gerätehaus.

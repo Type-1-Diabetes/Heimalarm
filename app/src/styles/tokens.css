@@ -39,6 +39,8 @@
   --c-app: #94a3b8;
   --c-routine: #a78bfa;
   --c-discord: #8b93f8;
+  /* Dashboard: Farbe je Quelle */
+  --c-divera: #5b9cf0; --c-wehr: #e9a945; --c-haus: #2fb9a8; --c-extra: #94a3b8;
 
   /* Typo – Mindestgröße 14 px für gute Lesbarkeit */
   --font: "Archivo", system-ui, sans-serif;
@@ -72,7 +74,7 @@
 /* Hell – zweite Auswahl */
 :root[data-theme="light"] {
   --bg: #f4f2ee; --bg-2: #ebe8e2; --surface: #ffffff; --surface-2: #f6f4f0; --surface-3: #ece9e3; --line: #e0dbd2; --line-2: #ebe7e0;
-  --c-alarm: #c42d21; --c-net: #2f6fc4; --c-pc: #12857a; --c-phone: #7454d6; --c-absent: #7454d6; --c-people: #a86b06; --c-voice: #22704a; --c-safe: #c2347f; --c-app: #5d6878; --c-routine: #7454d6; --c-discord: #4752c4;
+  --c-alarm: #c42d21; --c-net: #2f6fc4; --c-pc: #12857a; --c-phone: #7454d6; --c-absent: #7454d6; --c-people: #a86b06; --c-voice: #22704a; --c-safe: #c2347f; --c-app: #5d6878; --c-routine: #7454d6; --c-discord: #4752c4; --c-divera: #2f6fc4; --c-wehr: #a86b06; --c-haus: #12857a; --c-extra: #5d6878;
   --text: #16181d; --text-2: #4a505b;
   --signal: #c42d21; --signal-soft: #fbe9e6;
   --ok: #22704a; --ok-soft: #e4f1e9; --warn: #8a590d; --warn-soft: #fbf0dc;

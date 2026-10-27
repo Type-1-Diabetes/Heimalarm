@@ -10,7 +10,7 @@ const MIRROR_PREFIX: &str = "takeover-";
 /// Gleiche WebView2-Argumente wie das Hauptfenster (tauri.conf.json → additionalBrowserArgs).
 /// Unterschiedliche Argumente im selben Programm lässt WebView2 nicht zu.
 #[cfg(desktop)]
-const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows";
+pub(crate) const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows";
 
 #[tauri::command]
 pub async fn takeover_open(app: tauri::AppHandle, on: bool) -> Result<(), String> {

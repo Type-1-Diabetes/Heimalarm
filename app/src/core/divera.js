@@ -11,6 +11,7 @@ import { settings, set } from "./settings.js";
 import { log } from "./log.js";
 import { emit } from "./events.js";
 import { isTauri } from "./platform.js";
+import { parseBoard } from "./divera-board.js";
 
 const BASE = "https://app.divera247.com";
 const SEEN_KEY = "heimalarm.divera.seen";
@@ -20,7 +21,7 @@ try { seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[]")); } catc
 let primed = seen.size > 0;
 
 /** Laufzeit-Zustand für die Oberfläche. */
-export const divera = { ok: null, error: "", lastPoll: 0, current: null };
+export const divera = { ok: null, error: "", lastPoll: 0, current: null, board: null };
 
 async function http(url, opts = {}) {
   const f = isTauri ? (await import("@tauri-apps/plugin-http")).fetch : fetch;
@@ -186,4 +187,36 @@ export function restartDivera() {
   if (!on || !d.poll || !d.key) { divera.ok = d.key ? divera.ok : null; return; }
   pollDivera();
   timer = setInterval(pollDivera, Math.max(10, Number(d.pollSec) || 20) * 1000);
+}
+
+// ── Dashboard: Einheit, Fahrzeuge, Termine, Mitteilungen, Rückmeldungen ──
+let boardTimer = null;
+let boardAlarms = true;   // /alarms für Rückmeldungen versuchen; fällt weg, wenn der Schlüssel es nicht darf
+
+/** Einmal alles fürs Dashboard laden (pull/all, dazu /alarms für die Rückmeldungen). */
+export async function refreshBoard() {
+  if (!settings().divera.key) { divera.board = null; return; }
+  try {
+    const pull = await api("/api/v2/pull/all");
+    let alarms = null;
+    if (boardAlarms) {
+      try { alarms = await api("/api/v2/alarms"); }
+      catch { boardAlarms = false; }
+    }
+    divera.board = parseBoard(pull, alarms);
+    if (divera.board.myStatus) divera.current = divera.board.myStatus;
+    divera.ok = true; divera.error = "";
+  } catch (e) {
+    if (divera.error !== e.message) log("warn", `Divera fürs Dashboard: ${e.message}`, e.detail || "");
+    divera.ok = false; divera.error = e.message;
+  }
+  emit("divera", divera);
+}
+
+/** Abruf fürs Dashboard: alle `sec` Sekunden, 0 = aus. Bei Alarm schneller (Rückmeldungen). */
+export function boardPolling(sec) {
+  clearInterval(boardTimer); boardTimer = null;
+  if (!sec || !settings().divera.key) return;
+  refreshBoard();
+  boardTimer = setInterval(refreshBoard, Math.max(10, sec) * 1000);
 }

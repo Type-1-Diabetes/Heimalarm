@@ -79,7 +79,7 @@ const R = {
     return [head(t), h("div.ready", {},
       dot(ok ? "ok" : "warn"),
       h("div.ell", {}, h("b", {}, r.label), h("div.sub", {}, ok ? "Alarme lösen alles aus" : r.until || r.hint)),
-      btn(ok ? "Nicht verfügbar" : "Verfügbar", () => ctx.act({ type: "readiness", mode: ok ? "away" : "ready" })))];
+      btn(ok ? "Auf nicht verfügbar" : "Auf verfügbar", () => ctx.act({ type: "readiness", mode: ok ? "away" : "ready" })))];
   },
 
   system(t, s) {
@@ -188,7 +188,7 @@ const R = {
 
   weather(t, s) {
     const w = s.weather;
-    if (!w?.now) return [head(t, "Wetter", "DWD"), empty(w?.error ? `Wetter nicht abrufbar (${w.error})` : "Wird geladen … Standort unter Einstellungen → Zentrale.")];
+    if (!w?.now) return [head(t, "Wetter", "DWD"), empty(w?.error ? `Wetter nicht abrufbar (${w.error})` : "Wetter wird geladen. Falscher Ort? Einstellungen → Zentrale → Standort.")];
     const n = w.now, alert = w.alerts[0];
     const cond = { dry: "Trocken", fog: "Nebel", rain: "Regen", sleet: "Schneeregen", snow: "Schnee", hail: "Hagel", thunderstorm: "Gewitter" }[n.condition] || "";
     return [head(t, "Wetter", "DWD"),
@@ -216,7 +216,7 @@ export function renderTile(t, snap, ctx) {
   if (!def) return h("div.t");
   let body;
   try { body = R[t.type](t, snap, ctx); }
-  catch (e) { body = [head(t), empty(`Kachel fehlerhaft: ${e.message}`)]; }
+  catch (e) { console.warn("Kachel", t.type, e); body = [head(t), empty("Kachel konnte nicht gezeichnet werden.")]; }
   const lage = t.type === "alarm" && snap.alarm;
   return h(`div.t.t-${t.type}${lage ? ".lage" : ""}`, { style: `grid-area:${t.y + 1}/${t.x + 1}/${t.y + t.h + 1}/${t.x + t.w + 1};--a:${color(t)}`, "data-id": t.id }, ...[body].flat());
 }

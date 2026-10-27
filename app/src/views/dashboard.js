@@ -25,6 +25,13 @@ function use(on) {
 }
 window.addEventListener("hashchange", () => { if (!location.hash.startsWith("#/dashboard")) use(false); });
 
+/** Ausführlicher Hinweis in den Kachel-Einstellungen, wenn die Quelle fehlt. */
+const NEEDS_TEXT = {
+  divera: "Braucht einen Divera-Schlüssel (Einstellungen → Alarmquellen → Divera).",
+  logbuch: "Braucht das Einsatz-Logbuch (Einstellungen → Zusatzfunktionen).",
+  zentrale: "Geht nur mit Zentrale.",
+};
+
 /** Fehlt die Quelle einer Kachel? Kurzer Hinweis für die Palette. */
 function missing(def) {
   if (def.needs === "divera") return has.diveraApi() ? "" : "Divera mit Schlüssel einrichten";
@@ -143,9 +150,9 @@ function palette(dash, rerender) {
   const used = new Set(dash.views[ui.view].map((t) => t.type));
   return h("section.card.dash-palette", {},
     h("h2", {}, "Kachel hinzufügen"),
-    h("p.hint", {}, "Antippen legt die Kachel an die erste freie Stelle, oder auf das Raster ziehen."),
+    h("p.hint", {}, "Klicken legt die Kachel an die erste freie Stelle, oder auf das Raster ziehen."),
     Object.entries(GROUPS).map(([g, grp]) => h("div.pal-row", {},
-      h("span.pal-lbl", {}, grp.label),
+      h("span.pal-lbl", {}, grp.label, g === "divera" && !has.diveraApi() && h("small", {}, "braucht Divera-Schlüssel")),
       Object.entries(TILES).filter(([, d]) => d.group === g).map(([type, d]) => {
         const miss = missing(d);
         return h("button.pk" + (used.has(type) ? ".used" : ""), {
@@ -157,7 +164,7 @@ function palette(dash, rerender) {
             if (!id) return toast("Kein Platz frei – erst eine Kachel verkleinern oder entfernen");
             ui.sel = id; rerender();
           },
-        }, h("i", {}, icon(d.icon)), d.label, miss && h("small", {}, miss));
+        }, h("i", {}, icon(d.icon)), d.label, miss && d.needs !== "divera" && h("small", {}, miss));
       }))));
 }
 
@@ -193,7 +200,7 @@ function inspector(dash, rerender) {
   if (!t) {
     return h("aside.card.dash-inspect", {},
       h("h2", {}, "Kachel wählen"),
-      h("p.hint", {}, "Kachel antippen, um Größe und Inhalt einzustellen. Ziehen verschiebt, die Ecke unten rechts ändert die Größe."),
+      h("p.hint", {}, "Kachel anklicken, um Größe und Inhalt einzustellen. Ziehen verschiebt, die Ecke unten rechts ändert die Größe."),
       h("p.hint", {}, "Tastatur: Pfeile verschieben, Umschalt + Pfeile ändern die Größe, Entf entfernt."));
   }
   const def = TILES[t.type];
@@ -202,7 +209,7 @@ function inspector(dash, rerender) {
   const miss = missing(def);
   return h("aside.card.dash-inspect", { style: `--a:var(${def.color || GROUPS[def.group].color})` },
     h("h2", {}, h("span.ico", {}, icon(def.icon)), def.label),
-    miss && h("p.dash-warn", {}, `Zeigt erst etwas, wenn die Quelle da ist: ${miss}.`),
+    miss && h("p.dash-warn", {}, NEEDS_TEXT[def.needs]),
     h("div.field", {}, h("span", {}, "Größe"), h("div.steppers", {}, stepper("breit", t.w, (d) => grow(d, 0)), stepper("hoch", t.h, (d) => grow(0, d)))),
     t.type === "note" && [
       field("Überschrift", h("input.input", { value: t.opts?.title || "", placeholder: "Notiz", maxlength: 40, onchange: (e) => { setTileOpts(dash.id, ui.view, t.id, { title: e.target.value.trim() }); rerender(); } })),
@@ -219,7 +226,7 @@ function inspector(dash, rerender) {
         const id = addTile(dash.id, other, t.type);
         toast(id ? `In die ${VIEWS[other]}-Ansicht kopiert` : `In der ${VIEWS[other]}-Ansicht ist kein Platz`);
         if (id) setTileOpts(dash.id, other, id, t.opts || {});
-      } }, `Auch in „${VIEWS[other]}“`),
+      } }, `In ${VIEWS[other]}-Ansicht kopieren`),
       h("button.btn.small.ghost.danger", { type: "button", onclick: () => { removeTile(dash.id, ui.view, t.id); ui.sel = null; rerender(); } }, "Kachel entfernen")));
 }
 
@@ -261,7 +268,7 @@ export function dashboardView(rerender) {
 
   if (!dash) {
     return h("div.split", {}, listPane(null, rerender), h("section.split-detail", {},
-      h("section.card", {}, h("h2", {}, "Ein Alarmmonitor für deinen zweiten Bildschirm"),
+      h("section.card", {}, h("h2", {}, "Ein Alarmmonitor für deinen zweiten Monitor"),
         h("p", {}, "Stell dir aus Kacheln zusammen, was ein weiterer Monitor am PC zeigt: Uhr, Bereitschaft, Divera-Status, Fahrzeuge, Termine, Wetter. Bei Alarm wechselt er auf eine eigene Alarm-Ansicht mit Stichwort, Adresse und Rückmeldungen."),
         h("div.row", {}, h("button.btn.primary", { type: "button", onclick: () => { const nid = addDash(); location.hash = `#/dashboard/${nid}`; } }, "Erstes Dashboard anlegen")))));
   }

@@ -175,6 +175,7 @@
 .dash-palette h2 { margin: 0; font-size: var(--fs-lg); }
 .dash-palette .hint { margin: 0; }
 .pal-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.pal-lbl small { display: block; color: var(--warn); font-weight: 500; }
 .pal-lbl { width: 92px; font-size: var(--fs-xs); font-weight: 650; color: var(--text-2); }
 .pk { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 12px 4px 6px; border-radius: var(--radius-sm); border: 0;
   background: var(--surface-2); color: var(--text); font: 600 var(--fs-xs) var(--font); }

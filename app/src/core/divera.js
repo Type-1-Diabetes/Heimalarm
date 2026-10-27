@@ -207,7 +207,7 @@ export async function refreshBoard() {
     if (divera.board.myStatus) divera.current = divera.board.myStatus;
     divera.ok = true; divera.error = "";
   } catch (e) {
-    if (divera.error !== e.message) log("warn", `Divera fürs Dashboard: ${e.message}`, e.detail || "");
+    if (divera.error !== e.message) log("warn", `Divera-Abfrage (Dashboard) fehlgeschlagen: ${e.message}`, e.detail || "");
     divera.ok = false; divera.error = e.message;
   }
   emit("divera", divera);

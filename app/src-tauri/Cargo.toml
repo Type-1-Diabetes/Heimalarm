@@ -34,7 +34,7 @@ windows-sys = { version = "0.59", features = ["Win32_UI_Input_KeyboardAndMouse",
 # Alarmton nativ (spielt auch bei verstecktem Fenster), MP3/WAV/OGG/FLAC
 rodio = "0.20"
 # Windows Hello für die App-Sperre (gleiche Version wie Tauri, keine doppelte Kompilierung)
-windows = { version = "0.62", features = ["Security_Credentials_UI", "Foundation", "Win32_Foundation", "Win32_System_WinRT", "Win32_System_Com", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints"] }
+windows = { version = "0.62", features = ["Security_Credentials_UI", "Foundation", "Win32_Foundation", "Win32_System_WinRT", "Win32_System_Com", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_Devices_Display", "Win32_Graphics_Gdi"] }
 windows-future = "0.3"
 
 # Schnelle Release-Builds: weniger Optimierung, dafür kürzere Build-Zeit.

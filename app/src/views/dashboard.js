@@ -233,7 +233,7 @@ function inspector(dash, rerender) {
 // ── Linke Spalte: Dashboards und Anzeige ─────────────────────────────────────
 function listPane(dash, rerender) {
   if (ui.screens === null) { ui.screens = []; screens().then((s) => { ui.screens = s; rerender(); }); }
-  const scr = ui.screens.map((s, i) => [s.key, `${s.name || `Bildschirm ${i + 1}`} · ${s.width}×${s.height}${s.primary ? " (Hauptmonitor)" : ""}`]);
+  const scr = ui.screens.map((s, i) => [s.key, `${s.name || `Monitor ${i + 1}`} · ${s.width}×${s.height}${s.primary ? " · Hauptmonitor" : ""}`]);
   return h("aside.split-list", {},
     h("h1", {}, "Dashboards"),
     h("nav.split-nav", { "aria-label": "Dashboards" },

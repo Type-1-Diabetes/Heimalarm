@@ -16,6 +16,11 @@
 .dash-board .sub { color: var(--text-2); }
 
 .dash-board .t { background: var(--surface); border-radius: 16px; padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 12px; min-height: 0; min-width: 0; overflow: hidden; }
+/* Kachel-Einstellungen (opts): Hintergrund und Schriftgröße. zoom skaliert Inhalt samt fester px-Größen. */
+.dash-board .t.s-plain { background: transparent; }
+.dash-board .t.s-accent { background: color-mix(in srgb, var(--a) 14%, var(--surface)); }
+.dash-board .t.s-accent .sub, .dash-board .t.s-accent .dash-empty, .dash-board .t.s-accent .th { color: color-mix(in srgb, var(--a) 30%, var(--text-2)); }
+.dash-board .t > * { zoom: var(--ts, 1); }
 .dash-board .t .th { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 650; color: var(--text-2); min-width: 0; flex-shrink: 0; }
 .dash-board .t .th .ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--a) 16%, transparent); color: var(--a); font-size: 17px; }
 .dash-board .t .th .src { margin-left: auto; font: 500 13px var(--mono); color: var(--text-2); opacity: .8; white-space: nowrap; }
@@ -107,6 +112,8 @@
 .dash-board .note-text { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.3; white-space: pre-line; overflow: hidden; }
 .dash-board .t-image { padding: 0; }
 .dash-img { width: 100%; height: 100%; object-fit: contain; }
+.dash-img.cover { object-fit: cover; }
+.dash-board .note-text.center { text-align: center; margin: auto 0; }
 
 /* Rückmeldungen */
 .dash-board .rm-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-shrink: 0; }
@@ -158,12 +165,26 @@
 .dash-handle { position: absolute; right: -6px; bottom: -6px; width: 40px; height: 40px; border-radius: 10px; border: 4px solid var(--bg-2); background: var(--focus); padding: 0; display: none; touch-action: none; }
 .dash-box.sel .dash-handle, .dash-box:hover .dash-handle { display: block; }
 .dash-ghost { z-index: 3; border-radius: 16px; background: color-mix(in srgb, var(--focus) 18%, transparent); box-shadow: inset 0 0 0 4px var(--focus); pointer-events: none; }
+.dash-ghost.alt { z-index: 2; background: color-mix(in srgb, var(--focus) 8%, transparent); box-shadow: none; outline: 3px dashed color-mix(in srgb, var(--focus) 80%, transparent); outline-offset: -3px; }
 .dash-ghost.bad { background: color-mix(in srgb, var(--signal) 18%, transparent); box-shadow: inset 0 0 0 4px var(--signal); }
 
 .dash-inspect { display: grid; gap: var(--s3); align-content: start; }
 .dash-inspect h2 { margin: 0; font-size: var(--fs-lg); display: flex; align-items: center; gap: 10px; }
 .dash-inspect h2 .ico { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: color-mix(in srgb, var(--a) 16%, transparent); color: var(--a); }
 .dash-inspect .ico .icon { width: 18px; height: 18px; }
+.dash-grp { display: grid; gap: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--line-2); }
+.dash-grp h3 { margin: 0; font-size: var(--fs-sm); font-weight: 680; color: var(--text-2); }
+.dash-grp .segmented { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); justify-self: stretch; }
+.dash-grp .segmented button { padding: 7px 6px; font-size: var(--fs-xs); white-space: nowrap; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; background: var(--sw); color: #0e1013; font: 700 13px var(--font);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #000 18%, transparent); transition: transform .12s ease-out, box-shadow .12s ease-out; }
+.swatch.auto { background: conic-gradient(from 200deg, var(--c-haus), var(--c-divera), var(--c-wehr), var(--c-haus)); }
+.swatch:hover { transform: scale(1.08); }
+.swatch[aria-checked="true"] { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--sw); }
+.swatch.auto[aria-checked="true"] { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--text-2); }
+.swatch:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.dash-inspect .stepper span { font: 600 var(--fs-xs) var(--font); }
 .dash-warn { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--warn-soft); color: var(--warn); font-size: var(--fs-sm); }
 .steppers { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
 .stepper { display: flex; align-items: center; justify-content: space-between; height: 42px; border-radius: var(--radius-sm); background: var(--surface-3); padding: 0 4px; }

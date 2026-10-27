@@ -2,12 +2,12 @@
 // je Kachel einstellen und auf einem weiteren Monitor am PC anzeigen. Abgestimmt im Mockup docs/mockups/dashboard.html.
 // Die Vorschau ist dasselbe Bild wie auf dem Monitor (ui/tiles.js), darüber liegt eine Ebene zum Ziehen und Größe ändern.
 import { h, toast } from "../ui/dom.js";
-import { field, switchRow, select, ask } from "../ui/form.js";
+import { field, switchRow, select, segmented, ask } from "../ui/form.js";
 import { icon } from "../ui/icons.js";
 import { renderBoard, startTicker, W, H, PAD, GAP, CELL_W, CELL_H } from "../ui/tiles.js";
 import {
   COLS, ROWS, VIEWS, TILES, GROUPS, dashboards, getDash, addDash, removeDash, updateDash,
-  addTile, placeTile, removeTile, setTileOpts, fits,
+  addTile, placeTile, planPlace, removeTile, setTileOpts, fits,
 } from "../core/dashboard.js";
 import { snapshot, boardUse, previewAlarm, SAMPLE_ALARM } from "../core/board.js";
 import { screens } from "../core/tvlink.js";
@@ -65,6 +65,7 @@ function stageView(dash, rerender) {
     if (fits(tiles, { x, y, w: 1, h: 1 })) edit.append(h("div.dash-cell", { style: boxStyle({ x, y, w: 1, h: 1 }) }));
   }
   const ghost = h("div.dash-ghost", { hidden: true });
+  const shadows = [];   // Vorschau der verdrängten Kacheln
   edit.append(ghost);
 
   const stage = h("div.dash-scale.dash-stage", {}, board, edit);
@@ -81,7 +82,7 @@ function stageView(dash, rerender) {
         if (d) {
           e.preventDefault();
           const ok = e.shiftKey ? placeTile(dash.id, ui.view, t.id, { w: t.w + d[0], h: t.h + d[1] }) : placeTile(dash.id, ui.view, t.id, { x: t.x + d[0], y: t.y + d[1] });
-          if (!ok) toast("Dort ist kein Platz");
+          if (!ok) toast(e.shiftKey && (t.w + d[0] < def.minW || t.h + d[1] < def.minH) ? "Kleiner geht diese Kachel nicht" : "Kein Platz – die anderen Kacheln passen nicht daneben");
           ui.sel = t.id; rerender(); focusSel();
         } else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeTile(dash.id, ui.view, t.id); ui.sel = null; rerender(); }
         else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ui.sel = t.id; rerender(); focusSel(); }
@@ -101,17 +102,23 @@ function stageView(dash, rerender) {
           ? { x: t.x, y: t.y, w: Math.max(def.minW, Math.min(COLS - t.x, c.x - t.x + 1)), h: Math.max(def.minH, Math.min(ROWS - t.y, c.y - t.y + 1)) }
           : { x: Math.max(0, Math.min(COLS - t.w, t.x + c.x - start.x)), y: Math.max(0, Math.min(ROWS - t.h, t.y + c.y - start.y)), w: t.w, h: t.h };
         moved ||= rect.x !== t.x || rect.y !== t.y || rect.w !== t.w || rect.h !== t.h;
+        // Vorschau: wohin die gezogene Kachel kommt und wohin verdrängte Kacheln rücken (Tausch / neu ordnen)
+        const plan = moved ? planPlace(tiles, t.id, rect) : null;
         ghost.hidden = !moved;
-        ghost.style.cssText = boxStyle(rect);
-        ghost.classList.toggle("bad", !fits(tiles, rect, t.id));
+        ghost.style.cssText = boxStyle(plan?.[t.id] || rect);
+        ghost.classList.toggle("bad", moved && !plan);
+        const others = plan ? Object.entries(plan).filter(([id]) => id !== t.id) : [];
+        while (shadows.length < others.length) { const g = h("div.dash-ghost.alt"); shadows.push(g); edit.append(g); }
+        shadows.forEach((g, i) => { g.hidden = i >= others.length; if (i < others.length) g.style.cssText = boxStyle(others[i][1]); });
       };
       const up = () => {
         box.removeEventListener("pointermove", move);
         box.removeEventListener("pointerup", up);
         box.removeEventListener("pointercancel", up);
         ghost.hidden = true;
+        for (const g of shadows) g.hidden = true;
         ui.sel = t.id;
-        if (moved && !placeTile(dash.id, ui.view, t.id, rect)) toast("Dort ist kein Platz");
+        if (moved && !placeTile(dash.id, ui.view, t.id, rect)) toast("Kein Platz – die anderen Kacheln passen nicht daneben");
         rerender();
         focusSel();
       };
@@ -195,29 +202,81 @@ function pickImage(onDone) {
   inp.click();
 }
 
+// ── Aussehen und Inhalt je Kachel (Werte in tile.opts, gezeichnet von ui/tiles.js) ──
+/** Kachelfarben. Signalrot bleibt dem Alarm vorbehalten. */
+const ACCENTS = [["", "Automatisch"], ["--c-haus", "Türkis"], ["--c-divera", "Blau"], ["--c-wehr", "Orange"], ["--c-voice", "Grün"], ["--c-phone", "Violett"], ["--c-safe", "Pink"], ["--c-extra", "Grau"]];
+/** Kacheln mit Liste: Anzahl der Einträge begrenzbar (0 = so viele, wie passen). */
+const LISTS = new Set(["household", "system", "devices", "routines", "log", "einsaetze", "vehicles", "events", "news", "answers"]);
+/** Schalter je Kacheltyp: [Schlüssel, Bezeichnung, Hinweis]. Standard ist an. */
+const SWITCHES = {
+  clock: [["seconds", "Sekunden"], ["date", "Datum"]],
+  weather: [["wind", "Wind und Böen"], ["alerts", "Unwetterwarnungen", "vom Deutschen Wetterdienst"]],
+  stats: [["chart", "Monatsdiagramm", "ab 2 Feldern Höhe"]],
+  availability: [["legend", "Zahlen je Status", "ab 2 Feldern Höhe"]],
+  alarm: [["text", "Einsatztext", "ab 3 Feldern Höhe"], ["buttons", "Knöpfe", "Ich komme · Einsatz beenden"]],
+};
+
+function lookPane(t, def, opt) {
+  const o = t.opts || {};
+  return h("div.dash-grp", {},
+    h("h3", {}, "Aussehen"),
+    t.type !== "note" && field("Überschrift", h("input.input", { value: o.title || "", placeholder: def.label, maxlength: 40, onchange: (e) => opt({ title: e.target.value.trim() }) })),
+    switchRow("Kopfzeile", "Symbol und Überschrift oben", o.header !== false, (v) => opt({ header: v })),
+    h("div.field", {}, h("span", {}, "Farbe"),
+      h("div.swatches", { role: "radiogroup", "aria-label": "Farbe" }, ACCENTS.map(([k, label]) => h("button.swatch" + (k ? "" : ".auto"), {
+        type: "button", role: "radio", "aria-checked": String((o.accent || "") === k), "aria-label": label, title: label,
+        style: k ? `--sw:var(${k})` : `--sw:var(${def.color || GROUPS[def.group].color})`, onclick: () => opt({ accent: k }),
+      }, k ? null : "A")))),
+    h("div.field", {}, h("span", {}, "Schrift"), segmented([["s", "Klein"], ["", "Normal"], ["l", "Groß"], ["xl", "Riesig"]], o.size || "", (v) => opt({ size: v }))),
+    h("div.field", {}, h("span", {}, "Hintergrund"), segmented([["", "Fläche"], ["accent", "Farbig"], ["plain", "Ohne"]], o.surface || "", (v) => opt({ surface: v }))));
+}
+
+function contentPane(t, opt) {
+  const o = t.opts || {};
+  const sw = SWITCHES[t.type] || [];
+  const parts = [
+    t.type === "note" && [
+      field("Überschrift", h("input.input", { value: o.title || "", placeholder: "Notiz", maxlength: 40, onchange: (e) => opt({ title: e.target.value.trim() }) })),
+      field("Text", h("textarea.input", { rows: 4, maxlength: 400, value: o.text || "", onchange: (e) => opt({ text: e.target.value }) })),
+    ],
+    t.type === "image" && h("div.row", {},
+      h("button.btn.small", { type: "button", onclick: () => pickImage((src) => opt({ src })) }, o.src ? "Anderes Bild" : "Bild wählen"),
+      o.src && h("button.btn.small.ghost", { type: "button", onclick: () => opt({ src: "" }) }, "Entfernen")),
+    ...sw.map(([k, label, hint]) => switchRow(label, hint, o[k] !== false, (v) => opt({ [k]: v }))),
+    LISTS.has(t.type) && h("div.field", {}, h("span", {}, "Einträge"),
+      h("div.stepper", { role: "group", "aria-label": "Einträge" },
+        h("button", { type: "button", "aria-label": "Weniger Einträge", onclick: () => opt({ max: Math.max(0, (o.max || 11) - 1) }) }, "−"),
+        h("span", {}, o.max ? `höchstens ${o.max}` : "so viele, wie passen"),
+        h("button", { type: "button", "aria-label": "Mehr Einträge", onclick: () => opt({ max: o.max ? Math.min(20, o.max + 1) : 1 }) }, "+"))),
+    t.type === "note" && h("div.field", {}, h("span", {}, "Ausrichtung"), segmented([["", "Links"], ["center", "Mitte"]], o.align || "", (v) => opt({ align: v }))),
+    t.type === "image" && o.src && h("div.field", {}, h("span", {}, "Einpassen"), segmented([["", "Ganz zeigen"], ["cover", "Füllen"]], o.fit || "", (v) => opt({ fit: v }))),
+  ].filter(Boolean);
+  return parts.length ? h("div.dash-grp", {}, h("h3", {}, "Inhalt"), parts) : null;
+}
+
 function inspector(dash, rerender) {
   const t = dash.views[ui.view].find((x) => x.id === ui.sel);
   if (!t) {
     return h("aside.card.dash-inspect", {},
       h("h2", {}, "Kachel wählen"),
-      h("p.hint", {}, "Kachel anklicken, um Größe und Inhalt einzustellen. Ziehen verschiebt, die Ecke unten rechts ändert die Größe."),
+      h("p.hint", {}, "Kachel anklicken, um Größe, Aussehen und Inhalt einzustellen. Ziehen verschiebt; auf eine andere Kachel gezogen tauschen beide die Plätze. Die Ecke unten rechts ändert die Größe."),
       h("p.hint", {}, "Tastatur: Pfeile verschieben, Umschalt + Pfeile ändern die Größe, Entf entfernt."));
   }
   const def = TILES[t.type];
-  const grow = (dw, dh) => { if (!placeTile(dash.id, ui.view, t.id, { w: t.w + dw, h: t.h + dh })) toast(dw + dh < 0 ? "Kleiner geht diese Kachel nicht" : "Dort ist kein Platz"); rerender(); };
+  const grow = (dw, dh) => {
+    if (t.w + dw < def.minW || t.h + dh < def.minH) return toast("Kleiner geht diese Kachel nicht");
+    if (!placeTile(dash.id, ui.view, t.id, { w: t.w + dw, h: t.h + dh })) toast("Kein Platz – die anderen Kacheln passen nicht daneben");
+    rerender();
+  };
+  const opt = (patch) => { setTileOpts(dash.id, ui.view, t.id, patch); rerender(); };
   const other = ui.view === "ruhe" ? "alarm" : "ruhe";
   const miss = missing(def);
   return h("aside.card.dash-inspect", { style: `--a:var(${def.color || GROUPS[def.group].color})` },
     h("h2", {}, h("span.ico", {}, icon(def.icon)), def.label),
     miss && h("p.dash-warn", {}, NEEDS_TEXT[def.needs]),
     h("div.field", {}, h("span", {}, "Größe"), h("div.steppers", {}, stepper("breit", t.w, (d) => grow(d, 0)), stepper("hoch", t.h, (d) => grow(0, d)))),
-    t.type === "note" && [
-      field("Überschrift", h("input.input", { value: t.opts?.title || "", placeholder: "Notiz", maxlength: 40, onchange: (e) => { setTileOpts(dash.id, ui.view, t.id, { title: e.target.value.trim() }); rerender(); } })),
-      field("Text", h("textarea.input", { rows: 4, maxlength: 400, value: t.opts?.text || "", onchange: (e) => { setTileOpts(dash.id, ui.view, t.id, { text: e.target.value }); rerender(); } })),
-    ],
-    t.type === "image" && h("div.row", {},
-      h("button.btn.small", { type: "button", onclick: () => pickImage((src) => { setTileOpts(dash.id, ui.view, t.id, { src }); rerender(); }) }, t.opts?.src ? "Anderes Bild" : "Bild wählen"),
-      t.opts?.src && h("button.btn.small.ghost", { type: "button", onclick: () => { setTileOpts(dash.id, ui.view, t.id, { src: "" }); rerender(); } }, "Entfernen")),
+    lookPane(t, def, opt),
+    contentPane(t, opt),
     t.type === "weather" && h("p.hint", {}, "Daten vom Deutschen Wetterdienst über Bright Sky. Ort: Einstellungen → Zentrale → Standort."),
     t.type === "answers" && h("p.hint", {}, "Wer kommt, wer nicht, wer offen ist – aus Divera. Sichtbar ist nur, was dein Divera-Schlüssel sehen darf."),
     t.type === "alarm" && h("p.hint", {}, "Mit aPager allein kommen nur Stichwort und Einheit an, mit Divera oder SYBOS auch Adresse und Text."),
@@ -227,6 +286,7 @@ function inspector(dash, rerender) {
         toast(id ? `In die ${VIEWS[other]}-Ansicht kopiert` : `In der ${VIEWS[other]}-Ansicht ist kein Platz`);
         if (id) setTileOpts(dash.id, other, id, t.opts || {});
       } }, `In ${VIEWS[other]}-Ansicht kopieren`),
+      h("button.btn.small.ghost", { type: "button", onclick: () => opt({ ...(t.type === "note" ? {} : { title: "" }), header: true, accent: "", size: "", surface: "" }) }, "Aussehen zurücksetzen"),
       h("button.btn.small.ghost.danger", { type: "button", onclick: () => { removeTile(dash.id, ui.view, t.id); ui.sel = null; rerender(); } }, "Kachel entfernen")));
 }
 

@@ -118,16 +118,77 @@ export function addTile(dashId, view, type, at = null) {
   });
 }
 
-/** Lage/Größe ändern, nur wenn es passt. Liefert true bei Erfolg. */
+const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** Nächste freie Stelle zu `want` (Manhattan-Abstand). Erst in voller Größe, sonst kleiner bis zur Mindestgröße. */
+function nearestSpot(placed, want, w0, h0, def) {
+  const sizes = [];
+  for (let w = w0; w >= def.minW; w--) for (let h = h0; h >= def.minH; h--) sizes.push([w, h]);
+  sizes.sort((a, b) => b[0] * b[1] - a[0] * a[1]);
+  for (const [w, h] of sizes) {
+    let best = null, dist = Infinity;
+    for (let y = 0; y + h <= ROWS; y++) for (let x = 0; x + w <= COLS; x++) {
+      const r = { x, y, w, h };
+      if (placed.some((p) => overlaps(p, r))) continue;
+      const d = Math.abs(x - want.x) + Math.abs(y - want.y);
+      if (d < dist) { dist = d; best = r; }
+    }
+    if (best) return best;
+  }
+  return null;
+}
+
+/**
+ * Kachel `id` auf `rect` legen und überdeckte Kacheln neu ordnen.
+ * Verschieben auf genau eine Kachel = Tausch (beide wechseln die Plätze, wenn es passt).
+ * Sonst rücken die überdeckten Kacheln in den frei gewordenen Platz, beim Größe ändern an die nächste freie Stelle.
+ * Liefert { id: {x, y, w, h} } für alle Kacheln, deren Lage sich ändert, oder null, wenn es nicht aufgeht.
+ */
+export function planPlace(tiles, id, rect) {
+  const self = tiles.find((t) => t.id === id);
+  if (!self) return null;
+  const def = TILES[self.type];
+  const next = { x: rect.x, y: rect.y, w: Math.max(def.minW, rect.w), h: Math.max(def.minH, rect.h) };
+  if (next.x < 0 || next.y < 0 || next.x + next.w > COLS || next.y + next.h > ROWS) return null;
+  const others = tiles.filter((t) => t.id !== id);
+  const hit = others.filter((t) => overlaps(t, next)).toSorted((a, b) => a.y - b.y || a.x - b.x);
+  if (!hit.length) return { [id]: next };
+  const moved = next.x !== self.x || next.y !== self.y;
+
+  // Tausch: Ziel nimmt den alten Platz, die gezogene Kachel den des Ziels (beide in eigener Größe)
+  if (moved && hit.length === 1 && next.w === self.w && next.h === self.h) {
+    const o = hit[0];
+    const a = { x: o.x, y: o.y, w: self.w, h: self.h }, b = { x: self.x, y: self.y, w: o.w, h: o.h };
+    const rest = others.filter((t) => t !== o);
+    const inGrid = (r) => r.x + r.w <= COLS && r.y + r.h <= ROWS;
+    if (inGrid(a) && inGrid(b) && !overlaps(a, b) && !rest.some((t) => overlaps(t, a) || overlaps(t, b))) return { [id]: a, [o.id]: b };
+  }
+
+  const placed = [...others.filter((t) => !hit.includes(t)), next];
+  const out = { [id]: next };
+  for (const t of hit) {
+    // Beim Verschieben: gleicher Abstand im frei gewordenen Platz. Beim Größe ändern: möglichst nah an der alten Stelle.
+    const want = moved ? { x: self.x + (t.x - next.x), y: self.y + (t.y - next.y) } : { x: t.x, y: t.y };
+    const spot = nearestSpot(placed, want, t.w, t.h, TILES[t.type]);
+    if (!spot) return null;
+    placed.push(spot);
+    out[t.id] = spot;
+  }
+  return out;
+}
+
+/** Lage/Größe ändern; überdeckte Kacheln werden getauscht bzw. neu geordnet (planPlace). Liefert true bei Erfolg. */
 export function placeTile(dashId, view, tileId, rect) {
-  const d = getDash(dashId);
-  const t = d?.views[view]?.find((x) => x.id === tileId);
+  const tiles = getDash(dashId)?.views[view];
+  const t = tiles?.find((x) => x.id === tileId);
   if (!t) return false;
-  const def = TILES[t.type];
-  const next = { x: rect.x ?? t.x, y: rect.y ?? t.y, w: Math.max(def.minW, rect.w ?? t.w), h: Math.max(def.minH, rect.h ?? t.h) };
-  if (!fits(d.views[view], next, tileId)) return false;
-  if (next.x === t.x && next.y === t.y && next.w === t.w && next.h === t.h) return true;
-  mutate((list) => Object.assign(list.find((x) => x.id === dashId).views[view].find((x) => x.id === tileId), next));
+  const plan = planPlace(tiles, tileId, { x: rect.x ?? t.x, y: rect.y ?? t.y, w: rect.w ?? t.w, h: rect.h ?? t.h });
+  if (!plan) return false;
+  const changed = Object.entries(plan).filter(([id, r]) => { const o = tiles.find((x) => x.id === id); return o.x !== r.x || o.y !== r.y || o.w !== r.w || o.h !== r.h; });
+  if (changed.length) mutate((list) => {
+    const ts = list.find((x) => x.id === dashId).views[view];
+    for (const [id, r] of changed) Object.assign(ts.find((x) => x.id === id), r);
+  });
   return true;
 }
 

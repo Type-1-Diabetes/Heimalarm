@@ -30,11 +30,15 @@ services:
       - -c
       - |
         if [ -z "$$MQTT_PASSWORD" ]; then echo "Heimalarm: MQTT_PASSWORD fehlt in zentrale/.env – siehe .env.example" >&2; exit 1; fi
+        if [ -n "$$MQTT_ESP_PASSWORD" ] && [ "$$MQTT_ESP_USER" = "$$MQTT_USER" ]; then echo "Heimalarm: MQTT_USER und MQTT_ESP_USER sind gleich ($$MQTT_USER). MQTT_USER bleibt heimalarm – siehe .env.example" >&2; exit 1; fi
+        # Bei jedem Start neu anlegen (mosquitto_passwd -c überschreibt eine vorhandene Datei nicht mehr,
+        # sonst bliebe nach einer Passwortänderung in .env das alte Passwort gültig)
+        rm -f /mosquitto/data/passwd /mosquitto/data/acl
         mosquitto_passwd -c -b /mosquitto/data/passwd "$$MQTT_USER" "$$MQTT_PASSWORD"
         printf 'user %s\ntopic readwrite #\n' "$$MQTT_USER" > /mosquitto/data/acl
         if [ -n "$$MQTT_ESP_PASSWORD" ]; then
           mosquitto_passwd -b /mosquitto/data/passwd "$$MQTT_ESP_USER" "$$MQTT_ESP_PASSWORD"
-          printf '\nuser %s\ntopic read alarm/#\ntopic write alarm/+\ntopic write alarm/+/status\ntopic write alarm/+/debug\ntopic write alarm/+/+/+/state\ntopic readwrite homeassistant/#\n' "$$MQTT_ESP_USER" >> /mosquitto/data/acl
+          printf '\nuser %s\ntopic read alarm/#\ntopic write alarm/+\ntopic write alarm/+/status\ntopic write alarm/+/debug\ntopic write alarm/+/+/+/state\ntopic readwrite homeassistant/#\ntopic readwrite esphome/#\n' "$$MQTT_ESP_USER" >> /mosquitto/data/acl
         fi
         chown mosquitto:mosquitto /mosquitto/data/passwd /mosquitto/data/acl
         chmod 0700 /mosquitto/data/passwd /mosquitto/data/acl

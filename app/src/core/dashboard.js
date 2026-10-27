@@ -78,10 +78,10 @@ export const TEMPLATES = {
   leer: { label: "Leer", text: "Leeres Raster, alle Kacheln selbst wählen.", ruhe: [], alarm: [] },
 };
 
+const buildTiles = (list) => list.map(([type, x, y, w, h, opts]) => tile(type, x, y, w, h, opts ? { ...opts } : {}));
 const fromTemplate = (key) => {
   const tpl = TEMPLATES[key] || TEMPLATES.schreibtisch;
-  const build = (list) => list.map(([type, x, y, w, h, opts]) => tile(type, x, y, w, h, opts ? { ...opts } : {}));
-  return { ruhe: build(tpl.ruhe), alarm: build(tpl.alarm) };
+  return { ruhe: buildTiles(tpl.ruhe), alarm: buildTiles(tpl.alarm) };
 };
 
 function starter(name = "Schreibtisch", tpl = "schreibtisch") {

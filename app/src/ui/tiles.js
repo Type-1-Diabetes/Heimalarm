@@ -1,5 +1,5 @@
 // Dashboard-Kacheln zeichnen: ein Schnappschuss (core/board.js) → DOM.
-// Das Raster ist immer 1920 × 1080 groß und wird aufs Fenster skaliert (TV) bzw. verkleinert (Editor).
+// Das Raster ist immer 1920 × 1080 groß und wird aufs Fenster skaliert (Monitor) bzw. verkleinert (Editor).
 // Nur DOM, keine App-Logik: läuft im Hauptfenster (Editor-Vorschau) und im TV-Fenster (src/tv.js).
 import { h } from "./dom.js";
 import { icon } from "./icons.js";

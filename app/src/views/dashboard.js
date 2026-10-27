@@ -1,6 +1,6 @@
 // Dashboard-Editor (nur Windows-Programm): Dashboards anlegen, Kacheln im Raster 12 × 6 platzieren,
-// je Kachel einstellen und auf einem Bildschirm (Fernseher) anzeigen. Abgestimmt im Mockup docs/mockups/dashboard.html.
-// Die Vorschau ist dasselbe Bild wie auf dem TV (ui/tiles.js), darüber liegt eine Ebene zum Ziehen und Größe ändern.
+// je Kachel einstellen und auf einem weiteren Monitor am PC anzeigen. Abgestimmt im Mockup docs/mockups/dashboard.html.
+// Die Vorschau ist dasselbe Bild wie auf dem Monitor (ui/tiles.js), darüber liegt eine Ebene zum Ziehen und Größe ändern.
 import { h, toast } from "../ui/dom.js";
 import { field, switchRow, select, ask } from "../ui/form.js";
 import { icon } from "../ui/icons.js";
@@ -226,23 +226,23 @@ function inspector(dash, rerender) {
 // ── Linke Spalte: Dashboards und Anzeige ─────────────────────────────────────
 function listPane(dash, rerender) {
   if (ui.screens === null) { ui.screens = []; screens().then((s) => { ui.screens = s; rerender(); }); }
-  const scr = ui.screens.map((s, i) => [s.key, `${s.name || `Bildschirm ${i + 1}`} · ${s.width}×${s.height}${s.primary ? " (Hauptbildschirm)" : ""}`]);
+  const scr = ui.screens.map((s, i) => [s.key, `${s.name || `Bildschirm ${i + 1}`} · ${s.width}×${s.height}${s.primary ? " (Hauptmonitor)" : ""}`]);
   return h("aside.split-list", {},
     h("h1", {}, "Dashboards"),
     h("nav.split-nav", { "aria-label": "Dashboards" },
       dashboards().map((d) => h("a.split-item", { href: `#/dashboard/${d.id}`, "aria-current": dash?.id === d.id ? "page" : null },
         h("span.ico", { style: `--a:var(${d.on ? "--c-pc" : "--text-2"})` }, icon("tv")),
-        h("span.split-item-text", {}, h("b", {}, d.name), h("small", {}, d.on ? "läuft auf dem Fernseher" : "aus")),
+        h("span.split-item-text", {}, h("b", {}, d.name), h("small", {}, d.on ? "läuft auf dem Monitor" : "aus")),
         h("span.chev", {}, icon("chev")))),
       h("button.btn.small.dash-new", { type: "button", onclick: () => { const id = addDash(); location.hash = `#/dashboard/${id}`; } }, icon("plus"), "Neues Dashboard")),
     dash && h("div.dash-settings", {},
       h("div.split-grp", {}, "Anzeige"),
       field("Name", h("input.input", { value: dash.name, maxlength: 40, onchange: (e) => { updateDash(dash.id, { name: e.target.value.trim() || dash.name }); rerender(); } })),
-      field("Bildschirm",
+      field("Monitor",
         scr.length ? select([["", "Automatisch"], ...scr], dash.monitor || "", (v) => updateDash(dash.id, { monitor: v }))
-          : h("p.hint", {}, "Bildschirme werden gesucht …"),
-        "Automatisch = der erste Bildschirm, der nicht der Hauptbildschirm ist."),
-      switchRow("Auf dem Bildschirm zeigen", "Vollbild, startet mit Heimalarm.", dash.on, (v) => { updateDash(dash.id, { on: v }); rerender(); }),
+          : h("p.hint", {}, "Monitore werden gesucht …"),
+        "Automatisch = der erste Monitor, der nicht der Hauptmonitor ist."),
+      switchRow("Auf dem Monitor zeigen", "Vollbild, startet mit Heimalarm.", dash.on, (v) => { updateDash(dash.id, { on: v }); rerender(); }),
       switchRow("Bei Alarm umschalten", "auf die Alarm-Ansicht", dash.alarmSwitch !== false, (v) => updateDash(dash.id, { alarmSwitch: v })),
       field("Zurück nach (Minuten)", h("input.input", { type: "number", min: 5, max: 720, value: dash.backMin || 60, onchange: (e) => updateDash(dash.id, { backMin: Math.min(720, Math.max(5, Number(e.target.value) || 60)) }) }),
         "Wenn niemand „Einsatz beenden“ drückt."),
@@ -261,8 +261,8 @@ export function dashboardView(rerender) {
 
   if (!dash) {
     return h("div.split", {}, listPane(null, rerender), h("section.split-detail", {},
-      h("section.card", {}, h("h2", {}, "Ein Alarmmonitor für den Fernseher"),
-        h("p", {}, "Stell dir aus Kacheln zusammen, was der Fernseher am PC zeigt: Uhr, Bereitschaft, Divera-Status, Fahrzeuge, Termine, Wetter. Bei Alarm wechselt er auf eine eigene Alarm-Ansicht mit Stichwort, Adresse und Rückmeldungen."),
+      h("section.card", {}, h("h2", {}, "Ein Alarmmonitor für deinen zweiten Bildschirm"),
+        h("p", {}, "Stell dir aus Kacheln zusammen, was ein weiterer Monitor am PC zeigt: Uhr, Bereitschaft, Divera-Status, Fahrzeuge, Termine, Wetter. Bei Alarm wechselt er auf eine eigene Alarm-Ansicht mit Stichwort, Adresse und Rückmeldungen."),
         h("div.row", {}, h("button.btn.primary", { type: "button", onclick: () => { const nid = addDash(); location.hash = `#/dashboard/${nid}`; } }, "Erstes Dashboard anlegen")))));
   }
 
@@ -273,8 +273,8 @@ export function dashboardView(rerender) {
       h("div.segmented", { role: "group", "aria-label": "Ansicht" }, Object.entries(VIEWS).map(([v, label]) =>
         h("button", { type: "button", "aria-pressed": String(ui.view === v), onclick: () => { ui.view = v; ui.sel = null; rerender(); } }, label))),
       h("span.dash-sp"),
-      h("button.btn.small", { type: "button", disabled: !dash.on, title: dash.on ? "" : "Erst „Auf dem Bildschirm zeigen“ einschalten", onclick: () => { previewAlarm(60); toast("Alarm-Ansicht für 60 Sekunden auf dem Fernseher"); } }, "Alarm-Ansicht testen"),
-      h("button.btn.small" + (dash.on ? "" : ".primary"), { type: "button", onclick: () => { updateDash(dash.id, { on: !dash.on }); rerender(); } }, dash.on ? "Vom Bildschirm nehmen" : "Auf Bildschirm zeigen")),
+      h("button.btn.small", { type: "button", disabled: !dash.on, title: dash.on ? "" : "Erst „Auf dem Monitor zeigen“ einschalten", onclick: () => { previewAlarm(60); toast("Alarm-Ansicht für 60 Sekunden auf dem Monitor"); } }, "Alarm-Ansicht testen"),
+      h("button.btn.small" + (dash.on ? "" : ".primary"), { type: "button", onclick: () => { updateDash(dash.id, { on: !dash.on }); rerender(); } }, dash.on ? "Vom Monitor nehmen" : "Auf Monitor zeigen")),
     ui.view === "alarm" && h("p.hint", {}, "Vorschau mit Beispiel-Einsatz. Bei einem echten Alarm stehen hier Stichwort, Adresse und Rückmeldungen."),
     h("div.dash-work", {}, stageView(dash, rerender), inspector(dash, rerender)),
     palette(dash, rerender));

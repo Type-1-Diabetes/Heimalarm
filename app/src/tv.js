@@ -1,4 +1,4 @@
-// TV-Fenster: zeichnet das Dashboard aus dem Schnappschuss des Hauptfensters und schickt Bedienungen zurück.
+// Dashboard-Fenster (weiterer Monitor): zeichnet das Dashboard aus dem Schnappschuss des Hauptfensters und schickt Bedienungen zurück.
 // Startet weder Verbindung noch Alarm-Logik – das macht nur das Hauptfenster (core/tvlink.js).
 import { renderBoard, startTicker, W, H } from "./ui/tiles.js";
 import { h } from "./ui/dom.js";
@@ -27,9 +27,6 @@ function draw() {
 }
 
 document.addEventListener("contextmenu", (e) => e.preventDefault());
-// Maus kurz sichtbar machen, wenn sie bewegt wird (zum Antippen von Knöpfen)
-let hide = 0;
-addEventListener("mousemove", () => { document.body.style.cursor = "default"; clearTimeout(hide); hide = setTimeout(() => (document.body.style.cursor = "none"), 3000); });
 
 await listen("tv-state", ({ payload }) => { last = payload; draw(); });
 emit("tv-ready", { id });

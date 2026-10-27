@@ -1,4 +1,5 @@
-//! TV-Dashboard: randloses Vollbildfenster (`tv.html#<id>`) auf einem gewählten Bildschirm.
+//! Dashboard: randloses Vollbildfenster (`tv.html#<id>`) auf einem weiteren Monitor am PC.
+//! (Dateien und Events heißen historisch „tv“.)
 //! Inhalt und Bedienung laufen über Events mit dem Hauptfenster (src/core/tvlink.js) –
 //! das Fenster startet selbst keine Verbindung und keine Alarm-Logik.
 #[cfg(desktop)]

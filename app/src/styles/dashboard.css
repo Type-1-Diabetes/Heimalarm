@@ -1,4 +1,4 @@
-/* Dashboard (TV-Alarmmonitor): Raster 12 × 6 in fester Größe 1920 × 1080, skaliert per transform.
+/* Dashboard (Alarmmonitor auf einem weiteren Monitor): Raster 12 × 6 in fester Größe 1920 × 1080, skaliert per transform.
    Abgestimmt im Mockup docs/mockups/dashboard.html. Flächen statt Linien, Farbe je Quelle (--a). */
 .dash-scale { position: relative; overflow: hidden; }
 .dash-scale > .dash-board { position: absolute; left: 0; top: 0; transform-origin: 0 0; transform: scale(var(--k, 1)); }

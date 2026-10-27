@@ -14,6 +14,7 @@ import { answerDivera } from "./divera.js";
 import { answerApager } from "./apager.js";
 import { presenceSettled } from "./discord.js";
 import { runHotkeys } from "./hotkeys.js";
+import { parseSybos } from "./sybos.js";
 import { recordAlarm, recordAnswer, addSignal, addLate, markEvent, noteLast } from "./stats.js";
 import { readiness } from "./readiness.js";
 const offDuty = () => readiness().mode !== "ready";
@@ -207,6 +208,9 @@ export function alarmFromNotification({ app, title, text, ts, handled = false })
   if (seenNotes.has(key)) return;
   seenNotes.set(key, now);
   const data = { source, keyword: String(title || "").slice(0, 80), text: String(text || "").slice(0, 1000), app: pkg, ts: at };
+  // SYBOS: „ALARMIERUNG (Fahrzeug) - Zeit - Stichwort“ in Stichwort, Einheit und Einsatznummer zerlegen
+  const sy = pkg.includes("syphone") ? parseSybos(title, text) : null;
+  if (sy) Object.assign(data, { keyword: sy.keyword.slice(0, 80), text: sy.text.slice(0, 1000) }, sy.unit ? { unit: sy.unit } : {}, Object.keys(sy.details).length ? { details: sy.details } : {});
   if (now - at > LATE_MS) {
     // Zu spät für „Fährst du?“ und Routinen: nur den Einsatz im Logbuch ergänzen
     log("info", "Verspätete Meldung – Einsatz ergänzt, kein Alarm", `${source} · ${fmtTime(at)} · ${Math.round((now - at) / 60e3)} min später verarbeitet`);

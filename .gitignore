@@ -30,3 +30,6 @@ app/src-tauri/signing.json
 
 # Kopie des ESP32-Ordners auf der Zentrale (Raspberry Pi: cp -r ../esp32 ./esp32) – enthält secrets.yaml
 zentrale/esp32/
+
+# Impeccable: lokale Prüf-Screenshots
+.impeccable/review/

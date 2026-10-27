@@ -204,7 +204,7 @@ function statusPill() {
     : failed.length ? `Fehlgeschlagen: ${failed.join(", ")}` : "Verbunden";
   const pill = h("button.stpill." + kind, {
     type: "button", title: failed.length ? `Nicht erreichbar: ${failed.join(", ")} – Grund steht im Protokoll · tippen zum erneuten Prüfen` : "Tippen zum erneuten Prüfen",
-    onclick: () => { if (!checkup.running) runCheckup({ reason: "Pille angetippt" }); },
+    onclick: () => { if (!checkup.running) runCheckup({ reason: "Von Hand geprüft" }); },
   }, h("i", { "aria-hidden": "true" }),
   h("span" + (checkup.running && checkup.lineOk === null ? ".cur" : ""), {},
     checkup.running && checkup.lineOk !== null
@@ -345,8 +345,8 @@ function quickActions() {
   return [
     ...manual.map((r) => q("--c-routine", "flow", r.name, () => { if (has.pi()) publish("heimalarm/cmd/run", { id: r.id }); else fireLocal(r, { manual: true }); toast(`„${r.name}“ läuft`); })),
     ...wakeable.map((c) => q("--c-net", "pc", `${c.name} wecken`, () => wake(c))),
-    (has.zigbee() || has.matter()) && q("--ok", "home", "Wieder da", () => { emit("restore"); if (publish("heimalarm/cmd/restore", {})) toast("Vorheriger Zustand wird wiederhergestellt"); }),
-    // Discord-Status läuft, aber kein „Wieder da“ (ohne Zigbee): eigener Knopf
+    (has.zigbee() || has.matter()) && q("--ok", "home", "Einsatz beenden", () => { emit("restore"); if (publish("heimalarm/cmd/restore", {})) toast("Vorheriger Zustand wird wiederhergestellt"); }),
+    // Discord-Status läuft, aber kein Zigbee/Matter: eigener Knopf „Einsatz beenden“
     !has.zigbee() && !has.matter() && discord.active && discord.active.end > Date.now() && q("--c-discord", "chat", "Einsatz beenden", () => { emit("restore"); endPresence("von Hand"); toast("Discord-Status entfernt"); }),
   ].filter(Boolean);
 }

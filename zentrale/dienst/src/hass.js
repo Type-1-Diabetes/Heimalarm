@@ -60,7 +60,7 @@ export function startHass(ctx, log) {
       state_topic: `alarm/${k}/status`, payload_on: "online", payload_off: "offline",
     }]);
     if (c.buttons) {
-      list.push(["button", "heimalarm_wieder_da", { name: "Wieder da", icon: "mdi:home-import-outline", command_topic: "heimalarm/cmd/restore", payload_press: "{}" }]);
+      list.push(["button", "heimalarm_wieder_da", { name: "Einsatz beenden", icon: "mdi:home-import-outline", command_topic: "heimalarm/cmd/restore", payload_press: "{}" }]);
       for (const p of persons) list.push(["button", `heimalarm_test_${slug(p.id)}`, {
         name: persons.length > 1 ? `Testalarm ${p.name || p.id}` : "Testalarm", icon: "mdi:bell-check-outline", entity_category: "diagnostic",
         command_topic: `alarm/${p.id}`, payload_press: JSON.stringify({ source: "Home Assistant", test: true }),

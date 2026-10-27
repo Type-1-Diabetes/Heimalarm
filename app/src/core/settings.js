@@ -86,7 +86,7 @@ export const defaults = {
   },
   // Divera 24/7 – persönlicher Zugang. Bleibt auf diesem Gerät (wird nicht abgeglichen).
   divera: {
-    key: "",                // persönlicher Accesskey (Divera → Profil → Login → API-Schlüssel)
+    key: "",                // persönlicher Accesskey (Divera → Einstellungen → Debug → Accesskey)
     poll: false,            // Alarme direkt bei Divera abfragen
     pollSec: 20,
     answerGo: "",           // Rückmeldung zum Divera-Einsatz bei „Ich fahre“ (Status-ID)
@@ -140,6 +140,9 @@ export const defaults = {
   },
   // Zusatzfunktionen – bewusst aus, bis man sie einschaltet
   features: { logbuch: false, stats: false },
+  // TV-Dashboards (nur dieser PC): [{ id, name, monitor, on, alarmSwitch, backMin, views: { ruhe: [Kachel], alarm: [Kachel] } }]
+  // Kachel: { id, type, x, y, w, h, opts } im Raster 12 × 6 (x, y ab 0). core/dashboard.js
+  dashboards: [],
   // Einrichtungs-Assistent (nur dieses Gerät): Fortschritt, Antworten, von Hand abgehakte Schritte. core/wizard.js
   wizard: { done: false, step: 0, answers: { src: [], act: [], always: "nein" }, ok: {} },
 };

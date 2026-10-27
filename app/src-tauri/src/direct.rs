@@ -52,7 +52,7 @@ fn wait_events(since: Option<u64>) -> String {
 /// Ereignis an alle wartenden Handys (JSON-Objekt). Die letzten 50 bleiben für kurze Lücken.
 #[tauri::command]
 pub fn direct_push(json: String) -> Result<(), String> {
-    if !json.trim_start().starts_with('{') { return Err("kein JSON-Objekt".into()); }
+    if !json.trim_start().starts_with('{') { return Err("Daten vom Handy nicht lesbar".into()); }
     let (lock, cv) = events();
     let mut ev = lock.lock().map_err(|e| e.to_string())?;
     ev.rev += 1;

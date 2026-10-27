@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard-Mockup</title>
+<style>
+@font-face { font-family: "Archivo"; src: url("fonts/Archivo.ttf") format("truetype"), url("../../app/public/fonts/Archivo.ttf") format("truetype"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/JetBrainsMono.ttf") format("truetype"), url("../../app/public/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; }
+
+/* Tokens 1:1 aus app/src/styles/tokens.css */
+:root {
+  --bg: #0e1013; --surface: #171a1f; --bg-2: #12151a; --surface-2: #1e2228; --surface-3: #262b34;
+  --line: #2c313a; --line-2: #22272f; --text: #f1f2f4; --text-2: #b0b6c0;
+  --signal: #e5432f; --signal-soft: #3a1915; --ok: #4cc287; --ok-soft: #15291f; --warn: #e9a945; --warn-soft: #2e2413;
+  --info: #7cb0e4; --info-soft: #172433; --focus: #7cb0e4;
+  --c-alarm: #e5432f; --c-net: #5b9cf0; --c-pc: #2fb9a8; --c-phone: #a78bfa; --c-people: #e9a945; --c-voice: #4cc287; --c-app: #94a3b8; --c-routine: #a78bfa;
+  --c-divera: #5b9cf0; --c-wehr: #e9a945; --c-haus: #2fb9a8; --c-extra: #94a3b8;
+  --font: "Archivo", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --stage: #08090b;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #f4f2ee; --bg-2: #ebe8e2; --surface: #ffffff; --surface-2: #f6f4f0; --surface-3: #ece9e3; --line: #e0dbd2; --line-2: #ebe7e0;
+  --text: #16181d; --text-2: #4a505b;
+  --signal: #c42d21; --signal-soft: #fbe9e6; --ok: #22704a; --ok-soft: #e4f1e9; --warn: #8a590d; --warn-soft: #fbf0dc; --info: #2c5a88; --info-soft: #e7eef6; --focus: #2c5a88;
+  --c-alarm: #c42d21; --c-net: #2f6fc4; --c-pc: #12857a; --c-phone: #7454d6; --c-people: #a86b06; --c-app: #5d6878;
+  --c-divera: #2f6fc4; --c-wehr: #a86b06; --c-haus: #12857a; --c-extra: #5d6878;
+  --stage: #d9d5ce;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--stage); color: var(--text); font: 400 16px/1.4 var(--font); -webkit-font-smoothing: antialiased; }
+::selection { background: color-mix(in srgb, var(--signal) 40%, transparent); }
+button { font: inherit; color: inherit; }
+button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.icon { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ── Mockup-Rahmen (nicht Teil des Produkts) ── */
+.bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+.bar b { font-size: 15px; margin-right: 8px; }
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--surface-3); }
+.seg button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 14px; color: var(--text-2); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); }
+.bar .note { margin-left: auto; font-size: 13px; color: var(--text-2); }
+.stage { padding: 24px 16px 48px; display: grid; justify-items: center; gap: 12px; }
+.stage-cap { font-size: 14px; color: var(--text-2); max-width: 1100px; text-align: center; }
+.frame { position: relative; width: calc(1920px * var(--k)); height: calc(1080px * var(--k)); border-radius: 10px; overflow: hidden; box-shadow: 0 10px 40px rgb(0 0 0 / 35%); }
+.frame > .scale { width: 1920px; height: 1080px; transform: scale(var(--k)); transform-origin: 0 0; }
+.frame.app { width: calc(1600px * var(--k)); height: calc(1000px * var(--k)); }
+.frame.app > .scale { width: 1600px; height: 1000px; }
+[hidden] { display: none !important; }
+
+/* ── TV ── */
+.tv { width: 1920px; height: 1080px; background: var(--bg); padding: 24px; display: grid; gap: 16px;
+  grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(6, minmax(0, 1fr)); font-size: 20px; }
+.t { --a: var(--c-extra); background: var(--surface); border-radius: 16px; padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 12px; min-height: 0; min-width: 0; overflow: hidden; }
+.th { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 650; color: var(--text-2); min-width: 0; }
+.th .ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: color-mix(in srgb, var(--a) 16%, transparent); color: var(--a); font-size: 17px; }
+.th .src { margin-left: auto; font: 500 13px var(--mono); color: var(--text-2); opacity: .8; }
+.t.divera { --a: var(--c-divera); } .t.wehr { --a: var(--c-wehr); } .t.haus { --a: var(--c-haus); } .t.alarm { --a: var(--c-alarm); }
+.big { font-weight: 760; font-variation-settings: "wdth" 82; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.sub { color: var(--text-2); }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--d, var(--ok)); flex-shrink: 0; }
+.rows { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.rows li { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line-2); min-width: 0; }
+.rows li:first-child { border-top: 0; padding-top: 2px; }
+.rows .r { margin-left: auto; color: var(--text-2); font-size: 17px; white-space: nowrap; }
+.ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 16px; border-radius: 10px; border: 0; background: var(--surface-3); color: var(--text); font-weight: 650; font-size: 18px; }
+.btn:active { transform: translateY(1px); filter: brightness(.92); }
+.btn.on { background: color-mix(in srgb, var(--b, var(--ok)) 22%, var(--surface-3)); box-shadow: inset 0 0 0 2px var(--b, var(--ok)); }
+.btn.primary { background: var(--signal); color: #fff; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--surface-3); font: 500 14px var(--mono); color: var(--text-2); white-space: nowrap; }
+
+/* Uhr */
+.clock .big { font-size: 128px; }
+.clock .big small { font-size: 56px; color: var(--text-2); font-weight: 600; margin-left: 6px; }
+/* Status-Knöpfe */
+.choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: auto; }
+.choices .btn { font-size: 16px; min-height: 52px; padding: 0 8px; }
+/* Verfügbarkeit */
+.stack { display: flex; height: 26px; border-radius: 6px; overflow: hidden; gap: 3px; }
+.stack i { display: block; }
+.legend { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 16px; margin-top: 8px; }
+.legend div { display: flex; align-items: baseline; gap: 10px; }
+.legend b { font-size: 52px; font-weight: 760; font-variation-settings: "wdth" 82; font-variant-numeric: tabular-nums; min-width: 1.4ch; }
+.legend span { color: var(--text-2); font-size: 17px; display: flex; align-items: center; gap: 8px; }
+/* FMS */
+.fms { width: 40px; height: 40px; border-radius: 9px; display: grid; place-items: center; font: 700 22px var(--mono); background: var(--f, var(--ok-soft)); color: var(--fc, var(--ok)); flex-shrink: 0; }
+/* Wetter */
+.wx { display: flex; align-items: center; gap: 18px; }
+.wx .big { font-size: 72px; }
+.warnbox { margin-top: auto; padding: 12px 14px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 17px; font-weight: 600; display: flex; gap: 10px; }
+/* Termine */
+.date { width: 64px; flex-shrink: 0; text-align: center; border-radius: 10px; background: var(--surface-2); padding: 6px 0; }
+.date b { display: block; font-size: 28px; font-weight: 760; line-height: 1; font-variant-numeric: tabular-nums; }
+.date span { font-size: 13px; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; }
+.ev b { display: block; font-weight: 650; }
+.ev span { color: var(--text-2); font-size: 17px; }
+/* Mitteilungen */
+.news { display: grid; gap: 0; }
+.news article { padding: 14px 0; border-top: 1px solid var(--line-2); }
+.news article:first-child { border-top: 0; padding-top: 2px; }
+.news h3 { margin: 0 0 4px; font-size: 20px; }
+.news p { margin: 0; color: var(--text-2); font-size: 17px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.news time { display: block; margin-top: 6px; font: 500 14px var(--mono); color: var(--text-2); }
+/* Statistik */
+.spark { display: grid; grid-template-columns: repeat(12, 1fr); align-items: end; gap: 6px; height: 70px; margin-top: auto; }
+.spark i { display: block; border-radius: 3px 3px 0 0; background: color-mix(in srgb, var(--a) 55%, transparent); }
+.spark i.now { background: var(--a); }
+.months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; font: 500 12px var(--mono); color: var(--text-2); text-align: center; }
+/* Notiz */
+.notiz p { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.3; }
+
+/* ── Alarm-Ansicht ── */
+.tv.alarmv { background: radial-gradient(70% 90% at 25% 0%, color-mix(in srgb, var(--signal) 22%, var(--bg)) 0%, var(--bg) 70%); }
+.t.lage { background: color-mix(in srgb, var(--signal) 9%, var(--surface)); padding: 28px 34px; gap: 18px; position: relative; }
+.lage .top { display: flex; align-items: center; gap: 10px; }
+.lage .live { display: inline-flex; align-items: center; gap: 10px; font-weight: 750; color: var(--signal); font-size: 20px; letter-spacing: .02em; }
+.lage .live i { width: 14px; height: 14px; border-radius: 50%; background: var(--signal); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .lage .live i { animation: none; } }
+.lage h1 { margin: 0; font-size: 112px; font-weight: 800; font-variation-settings: "wdth" 84; letter-spacing: -0.03em; line-height: .95; }
+.lage .kw { font-size: 34px; font-weight: 650; color: var(--text-2); margin-top: -4px; }
+.lage .addr { font-size: 46px; font-weight: 720; font-variation-settings: "wdth" 88; line-height: 1.1; }
+.lage .txt { font-size: 24px; color: var(--text-2); line-height: 1.4; max-width: 60ch; }
+.lage .since { margin-left: auto; display: flex; align-items: baseline; gap: 14px; }
+.lage .since b { display: block; font: 600 64px var(--mono); line-height: 1; font-variant-numeric: tabular-nums; }
+.lage .since span { font-size: 18px; color: var(--text-2); }
+.lage .act { margin-top: auto; display: flex; gap: 12px; align-items: center; }
+.lage .act .btn { min-height: 60px; font-size: 20px; padding: 0 22px; }
+.lage .act .hint { margin-left: auto; font-size: 16px; color: var(--text-2); }
+.rm-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.rm-sum div { border-radius: 12px; padding: 12px 14px; background: color-mix(in srgb, var(--x) 14%, var(--surface-2)); }
+.rm-sum b { display: block; font-size: 56px; font-weight: 780; font-variation-settings: "wdth" 82; line-height: 1; color: var(--x); font-variant-numeric: tabular-nums; }
+.rm-sum span { font-size: 16px; color: var(--text-2); }
+.rm-h { font-size: 15px; font-weight: 700; color: var(--text-2); margin: 4px 0 -4px; }
+
+/* ── Editor (App) ── */
+.appwin { width: 1600px; height: 1000px; background: var(--bg); display: grid; grid-template-columns: 84px 270px minmax(0, 1fr) 330px; font-size: 16px; }
+.rail { background: var(--bg-2); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0; }
+.rail .logo { width: 52px; height: 52px; border-radius: 14px; background: var(--signal); color: #fff; display: grid; place-items: center; font-size: 28px; margin-bottom: 14px; }
+.rail a { width: 70px; padding: 10px 0 8px; border-radius: 12px; display: grid; justify-items: center; gap: 4px; color: var(--text-2); font-size: 13px; font-weight: 600; text-decoration: none; position: relative; }
+.rail a .icon { font-size: 22px; }
+.rail a.cur { background: var(--surface); color: var(--text); }
+.rail a.cur::before { content: ""; position: absolute; left: -7px; top: 14px; bottom: 14px; width: 3px; border-radius: 3px; background: var(--signal); }
+.list { background: var(--bg-2); border-left: 1px solid var(--line-2); padding: 26px 16px; display: flex; flex-direction: column; gap: 6px; }
+.list h2 { margin: 0 8px 14px; font-size: 24px; font-weight: 750; font-variation-settings: "wdth" 90; }
+.li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; }
+.li.cur { background: var(--surface); }
+.li b { display: block; font-size: 16px; }
+.li small { color: var(--text-2); font-size: 14px; }
+.li .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--a) 16%, transparent); color: var(--a); font-size: 19px; }
+.grp { margin: 18px 12px 4px; font-size: 13px; font-weight: 700; color: var(--text-2); letter-spacing: .06em; text-transform: uppercase; }
+.list .add { margin-top: 8px; justify-content: flex-start; font-size: 15px; min-height: 42px; background: none; color: var(--text-2); }
+.main { padding: 26px 28px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.mh { display: flex; align-items: center; gap: 14px; }
+.mh h1 { margin: 0; font-size: 30px; font-weight: 760; font-variation-settings: "wdth" 88; }
+.mh .sp { flex: 1; }
+.mh .btn { min-height: 42px; font-size: 15px; }
+.seg.lg button { font-size: 15px; padding: 8px 18px; }
+.canvas { position: relative; border-radius: 14px; background: var(--bg-2); padding: 12px; aspect-ratio: 16 / 9; display: grid; gap: 8px;
+  grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(6, minmax(0, 1fr)); }
+.canvas .cell { border-radius: 8px; border: 1.5px dashed var(--line); }
+.canvas .k { --a: var(--c-extra); position: relative; border-radius: 10px; background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; z-index: 1; }
+.canvas .k .th { font-size: 14px; gap: 8px; }
+.canvas .k .th .ico { width: 24px; height: 24px; border-radius: 7px; font-size: 14px; }
+.canvas .k .sz { margin-top: auto; font: 500 12px var(--mono); color: var(--text-2); }
+.canvas .k.divera { --a: var(--c-divera); } .canvas .k.wehr { --a: var(--c-wehr); } .canvas .k.haus { --a: var(--c-haus); } .canvas .k.alarm { --a: var(--c-alarm); }
+.canvas .k.sel { box-shadow: 0 0 0 2px var(--focus), 0 8px 24px rgb(0 0 0 / 30%); }
+.canvas .k.sel::after { content: ""; position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; border-radius: 4px; background: var(--focus); border: 2px solid var(--bg-2); }
+.canvas .free { z-index: 1; border-radius: 10px; border: 1.5px dashed var(--focus); background: color-mix(in srgb, var(--focus) 8%, transparent); display: grid; place-items: center; color: var(--focus); font-weight: 650; font-size: 14px; }
+.palette { display: grid; gap: 10px; }
+.palette h2 { margin: 0; font-size: 16px; }
+.pal-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pal-row .pk { --a: var(--c-extra); display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 6px; border-radius: 10px; background: var(--surface); font-size: 14px; font-weight: 600; }
+.pal-row .pk i { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: color-mix(in srgb, var(--a) 16%, transparent); color: var(--a); font-size: 15px; font-style: normal; }
+.pal-row .pk.divera { --a: var(--c-divera); } .pal-row .pk.wehr { --a: var(--c-wehr); } .pal-row .pk.haus { --a: var(--c-haus); } .pal-row .pk.alarm { --a: var(--c-alarm); }
+.pal-row .pk.used { opacity: .45; }
+.pal-lbl { font-size: 13px; color: var(--text-2); font-weight: 600; width: 92px; display: inline-flex; align-items: center; }
+.side { background: var(--bg-2); border-left: 1px solid var(--line-2); padding: 26px 22px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
+.side h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+.side h2 .ico { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: color-mix(in srgb, var(--c-divera) 16%, transparent); color: var(--c-divera); font-size: 18px; }
+.fld { display: grid; gap: 6px; }
+.fld label { font-size: 14px; font-weight: 650; }
+.fld small { font-size: 14px; color: var(--text-2); line-height: 1.35; }
+.steppers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stepper { display: flex; align-items: center; justify-content: space-between; height: 42px; border-radius: 10px; background: var(--surface-3); padding: 0 4px; }
+.stepper button { width: 30px; height: 34px; border: 0; border-radius: 8px; background: none; font-size: 20px; color: var(--text-2); }
+.stepper span { font: 600 14px var(--mono); white-space: nowrap; }
+.select { height: 42px; border-radius: 10px; background: var(--surface-3); display: flex; align-items: center; padding: 0 12px; font-size: 15px; justify-content: space-between; }
+.sw { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); }
+.sw b { font-size: 15px; display: block; }
+.sw small { font-size: 14px; color: var(--text-2); }
+.tog { width: 42px; height: 24px; border-radius: 12px; background: var(--surface-3); position: relative; flex-shrink: 0; }
+.tog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text-2); }
+.tog.on { background: var(--ok); } .tog.on::after { left: 21px; background: #fff; }
+.side .del { margin-top: auto; background: none; color: var(--signal); justify-content: flex-start; padding: 0; min-height: 36px; font-size: 15px; }
+.infobox { border-radius: 10px; padding: 10px 12px; background: var(--info-soft); color: var(--info); font-size: 14px; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 3.1a4 4 0 0 1 0 7.8M22 21a7 7 0 0 0-4-6.3"/></symbol>
+  <symbol id="i-hub" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5A8 8 0 1 1 21 12z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-flow" viewBox="0 0 24 24"><path d="M4 7h11M4 17h7M18 4l3 3-3 3M15 14l3 3-3 3"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="4" rx="1.5"/><rect x="13" y="10" width="8" height="10" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M2 7h11v9H2zM13 10h5l3 3v3h-8"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z"/></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h6"/></symbol>
+  <symbol id="i-mega" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1zM17 9a4 4 0 0 1 0 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/></symbol>
+</svg>
+
+<div class="bar" role="toolbar" aria-label="Mockup">
+  <b>Dashboard · Mockup</b>
+  <div class="seg" id="views">
+    <button aria-pressed="true" data-v="ruhe">Monitor · Ruhe</button>
+    <button aria-pressed="false" data-v="alarm">Monitor · Alarm</button>
+    <button aria-pressed="false" data-v="editor">Editor in der App</button>
+  </div>
+  <div class="seg" id="theme">
+    <button aria-pressed="true" data-t="dark">Dunkel</button>
+    <button aria-pressed="false" data-t="light">Hell</button>
+  </div>
+  <span class="note">Alle Namen, Zahlen und Termine sind Beispieldaten.</span>
+</div>
+
+<main class="stage">
+
+<!-- ═══════════ TV · RUHE ═══════════ -->
+<section data-view="ruhe">
+  <p class="stage-cap">Weiterer Monitor am PC, 1920 × 1080, Raster 12 × 6. So sieht es aus, solange kein Alarm läuft.</p>
+  <div class="frame"><div class="scale"><div class="tv">
+
+    <div class="t clock" style="grid-area: 1 / 1 / 3 / 4">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-clock"/></svg></span>Uhr</div>
+      <div class="big mono-ish">19:42<small>:26</small></div>
+      <div class="sub" style="font-size:26px">Dienstag, 27. Oktober</div>
+    </div>
+
+    <div class="t divera" style="grid-area: 3 / 1 / 4 / 4">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-people"/></svg></span>Mein Divera-Status</div>
+      <div class="choices">
+        <button class="btn on" style="--b: var(--ok)"><span class="dot"></span>Verfügbar</button>
+        <button class="btn"><span class="dot" style="--d: var(--warn)"></span>Bedingt</button>
+        <button class="btn"><span class="dot" style="--d: var(--signal)"></span>Nicht</button>
+      </div>
+    </div>
+
+    <div class="t haus" style="grid-area: 4 / 1 / 5 / 4">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-home"/></svg></span>Bereitschaft</div>
+      <div style="display:flex; align-items:center; gap:14px; margin-top:auto">
+        <span class="dot" style="width:16px;height:16px"></span>
+        <div><b style="font-size:26px">Verfügbar</b><div class="sub" style="font-size:16px">Alarme lösen alles aus</div></div>
+        <button class="btn" style="margin-left:auto; font-size:16px">Ändern</button>
+      </div>
+    </div>
+
+    <div class="t haus" style="grid-area: 5 / 1 / 7 / 4">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-hub"/></svg></span>Systemstatus</div>
+      <ul class="rows">
+        <li><span class="dot"></span>Zentrale<span class="r">verbunden</span></li>
+        <li><span class="dot"></span>Melder „ich“<span class="r mono">−58 dBm</span></li>
+        <li><span class="dot" style="--d: var(--warn)"></span>Melder „kollege“<span class="r" style="color:var(--warn)">seit 2 h offline</span></li>
+        <li><span class="dot"></span>Divera<span class="r">verbunden</span></li>
+        <li><span class="dot"></span>Pixel 8<span class="r">online</span></li>
+      </ul>
+    </div>
+
+    <div class="t divera" style="grid-area: 1 / 4 / 3 / 7">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-people"/></svg></span>Verfügbarkeit der Einheit<span class="src">LZ 1</span></div>
+      <div class="stack" aria-label="14 verfügbar, 4 bedingt, 6 nicht verfügbar, 3 keine Angabe">
+        <i style="flex:14; background:var(--ok)"></i><i style="flex:4; background:var(--warn)"></i><i style="flex:6; background:var(--signal)"></i><i style="flex:3; background:var(--surface-3)"></i>
+      </div>
+      <div class="legend">
+        <div><b style="color:var(--ok)">14</b><span>verfügbar</span></div>
+        <div><b style="color:var(--warn)">4</b><span>bedingt</span></div>
+        <div><b style="color:var(--signal)">6</b><span>nicht verfügbar</span></div>
+        <div><b class="sub">3</b><span>keine Angabe</span></div>
+      </div>
+    </div>
+
+    <div class="t divera" style="grid-area: 3 / 4 / 5 / 7">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-truck"/></svg></span>Fahrzeuge</div>
+      <ul class="rows">
+        <li><span class="fms">2</span><b>HLF 20</b><span class="r">auf Wache</span></li>
+        <li><span class="fms">2</span><b>TLF 3000</b><span class="r">auf Wache</span></li>
+        <li><span class="fms" style="--f: var(--info-soft); --fc: var(--info)">1</span><b>DLK 23/12</b><span class="r">frei über Funk</span></li>
+        <li><span class="fms" style="--f: var(--warn-soft); --fc: var(--warn)">6</span><b>MTW</b><span class="r">außer Dienst</span></li>
+      </ul>
+    </div>
+
+    <div class="t" style="grid-area: 5 / 4 / 7 / 7">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-cloud"/></svg></span>Wetter<span class="src">DWD</span></div>
+      <div class="wx">
+        <span class="big">8°</span>
+        <div><b style="font-size:22px">Bedeckt, Böen</b><div class="sub" style="font-size:17px">Wind 34 km/h · heute 4° bis 10°</div></div>
+      </div>
+      <div class="warnbox"><svg class="icon" style="font-size:22px"><use href="#i-wind"/></svg><span>Sturmböen bis 70 km/h<br><span style="font-weight:500">bis Mi 06:00</span></span></div>
+    </div>
+
+    <div class="t divera" style="grid-area: 1 / 7 / 4 / 10">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-cal"/></svg></span>Termine</div>
+      <ul class="rows">
+        <li><span class="date"><b>29</b><span>Do</span></span><div class="ev ell"><b class="ell">Übungsdienst TH</b><span>19:30 · Gerätehaus</span></div></li>
+        <li><span class="date"><b>31</b><span>Sa</span></span><div class="ev ell"><b class="ell">Atemschutz-Strecke</b><span>09:00 · FTZ</span></div></li>
+        <li><span class="date"><b>02</b><span>Mo</span></span><div class="ev ell"><b class="ell">Gruppenführer</b><span>19:00 · Schulungsraum</span></div></li>
+        <li><span class="date"><b>07</b><span>Sa</span></span><div class="ev ell"><b class="ell">Kameradschaftsabend</b><span>18:00 · Gerätehaus</span></div></li>
+      </ul>
+    </div>
+
+    <div class="t divera" style="grid-area: 4 / 7 / 7 / 10">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-mega"/></svg></span>Mitteilungen</div>
+      <div class="news">
+        <article><h3>HLF 20 wieder einsatzbereit</h3><p>Die Pumpe ist repariert, das Fahrzeug steht ab sofort wieder zur Verfügung.</p><time>heute 16:05</time></article>
+        <article><h3>Neue Funkmeldeempfänger</h3><p>Bitte bis Ende November im Gerätehaus abholen und die alten Melder abgeben.</p><time>Mo 26.10.</time></article>
+      </div>
+    </div>
+
+    <div class="t wehr" style="grid-area: 1 / 10 / 4 / 13">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-list"/></svg></span>Letzte Einsätze</div>
+      <ul class="rows">
+        <li><div class="ev ell"><b class="ell">B3 Wohnungsbrand</b><span>Heute 14:12 · gefahren</span></div></li>
+        <li><div class="ev ell"><b class="ell">TH1 Baum auf Straße</b><span>Sa 24.10. · gefahren</span></div></li>
+        <li><div class="ev ell"><b class="ell">B1 Kleinbrand</b><span>Do 22.10. · nicht gefahren</span></div></li>
+        <li><div class="ev ell"><b class="ell">BMA Schule</b><span>Mo 19.10. · gefahren</span></div></li>
+      </ul>
+    </div>
+
+    <div class="t wehr" style="grid-area: 4 / 10 / 6 / 13">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-chart"/></svg></span>Einsätze 2026</div>
+      <div style="display:flex; align-items:baseline; gap:12px"><span class="big" style="font-size:64px">41</span><span class="sub" style="font-size:17px">davon 29 gefahren</span></div>
+      <div class="spark" aria-label="Einsätze je Monat">
+        <i style="height:40%"></i><i style="height:30%"></i><i style="height:55%"></i><i style="height:35%"></i><i style="height:60%"></i><i style="height:80%"></i><i style="height:70%"></i><i style="height:45%"></i><i style="height:50%"></i><i class="now" style="height:65%"></i><i style="height:0"></i><i style="height:0"></i>
+      </div>
+      <div class="months"><span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span><span>J</span><span>A</span><span>S</span><span>O</span><span>N</span><span>D</span></div>
+    </div>
+
+    <div class="t notiz" style="grid-area: 6 / 10 / 7 / 13">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-note"/></svg></span>Notiz</div>
+      <p>Schlüssel fürs Gerätehaus liegt bei Jonas.</p>
+    </div>
+
+  </div></div></div>
+</section>
+
+<!-- ═══════════ TV · ALARM ═══════════ -->
+<section data-view="alarm" hidden>
+  <p class="stage-cap">Bei Alarm wechselt der Monitor in die Alarm-Ansicht: ein eigenes Layout, ebenfalls frei zusammengestellt. „Einsatz beenden“ wechselt zurück.</p>
+  <div class="frame"><div class="scale"><div class="tv alarmv">
+
+    <div class="t lage" style="grid-area: 1 / 1 / 5 / 9">
+      <div class="top">
+        <span class="live"><i></i>ALARM</span>
+        <span class="chip">Divera</span><span class="chip">Melder</span>
+        <div class="since"><span>seit 19:40:12</span><b>02:14</b></div>
+      </div>
+      <h1>B3 Wohnungsbrand</h1>
+      <div class="kw">Personen in Gefahr · LZ 1, LZ 2, RTW</div>
+      <div class="addr">Lindenstraße 14<br>37073 Göttingen-Weende</div>
+      <div class="txt">Rauch aus Fenster im 2. OG, Bewohnerin vermutlich noch in der Wohnung. Zufahrt über Hofeinfahrt.</div>
+      <div class="act">
+        <button class="btn on" style="--b: var(--ok)"><svg class="icon"><use href="#i-check"/></svg>Ich komme</button>
+        <button class="btn">Ich komme nicht</button>
+        <button class="btn" style="margin-left:12px">Einsatz beenden</button>
+        <span class="hint">Rückmeldung geht an Divera</span>
+      </div>
+    </div>
+
+    <div class="t divera" style="grid-area: 1 / 9 / 5 / 13">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-people"/></svg></span>Rückmeldungen der Wehr</div>
+      <div class="rm-sum">
+        <div style="--x: var(--ok)"><b>7</b><span>kommen</span></div>
+        <div style="--x: var(--signal)"><b>2</b><span>kommen nicht</span></div>
+        <div style="--x: var(--text-2)"><b>15</b><span>offen</span></div>
+      </div>
+      <div class="rm-h">Kommen</div>
+      <ul class="rows">
+        <li><span class="dot"></span>Alex Brandt<span class="r mono">+0:31</span></li>
+        <li><span class="dot"></span>Jonas Keller<span class="r mono">+0:44</span></li>
+        <li><span class="dot"></span>Mia Wolff<span class="r mono">+0:52</span></li>
+        <li><span class="dot"></span>Lena Sommer<span class="r mono">+1:05</span></li>
+        <li><span class="dot"></span>Tom Richter<span class="r mono">+1:20</span></li>
+        <li class="sub" style="font-size:17px">und 2 weitere</li>
+      </ul>
+    </div>
+
+    <div class="t haus" style="grid-area: 5 / 1 / 7 / 5">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-home"/></svg></span>Wer fährt? (Haushalt)</div>
+      <ul class="rows">
+        <li><span class="dot"></span><b>Alex</b><span class="r">Ich fahre · <span class="mono">19:40:43</span></span></li>
+        <li><span class="dot" style="--d: var(--surface-3)"></span><b>Sam</b><span class="r">nicht alarmiert</span></li>
+      </ul>
+    </div>
+
+    <div class="t divera" style="grid-area: 5 / 5 / 7 / 9">
+      <div class="th"><span class="ico"><svg class="icon"><use href="#i-truck"/></svg></span>Fahrzeuge</div>
+      <ul class="rows">
+        <li><span class="fms" style="--f: var(--signal-soft); --fc: var(--signal)">3</span><b>HLF 20</b><span class="r">Einsatz übernommen</span></li>
+        <li><span class="fms">2</span><b>TLF 3000</b><span class="r">auf Wache</span></li>
+      </ul>
+    </div>
+
+    <div class="t clock" style="grid-area: 5 / 9 / 6 / 13; flex-direction:row; align-items:center">
+      <div class="big" style="font-size:72px">19:42<small style="font-size:34px">:26</small></div>
+      <div class="sub" style="margin-left:auto; text-align:right">Di<br>27. Okt</div>
+    </div>
+
+    <div class="t" style="grid-area: 6 / 9 / 7 / 13; flex-direction:row; align-items:center; gap:16px">
+      <span class="big" style="font-size:56px">8°</span>
+      <div><b style="font-size:19px">Sturmböen bis 70 km/h</b><div class="sub" style="font-size:16px">DWD-Warnung bis Mi 06:00</div></div>
+    </div>
+
+  </div></div></div>
+</section>
+
+<!-- ═══════════ EDITOR ═══════════ -->
+<section data-view="editor" hidden>
+  <p class="stage-cap">Bearbeitet wird in der App am Hauptmonitor. Kacheln ziehen, an der Ecke die Größe ändern, rechts einstellen.</p>
+  <div class="frame app"><div class="scale"><div class="appwin">
+
+    <nav class="rail" aria-label="Hauptmenü">
+      <div class="logo"><svg class="icon"><use href="#i-home"/></svg></div>
+      <a><svg class="icon"><use href="#i-home"/></svg>Start</a>
+      <a><svg class="icon"><use href="#i-bulb"/></svg>Geräte</a>
+      <a><svg class="icon"><use href="#i-flow"/></svg>Routinen</a>
+      <a><svg class="icon"><use href="#i-list"/></svg>Einsätze</a>
+      <a class="cur"><svg class="icon"><use href="#i-grid"/></svg>Dashboard</a>
+      <a><svg class="icon"><use href="#i-chat"/></svg>Protokoll</a>
+      <a><svg class="icon"><use href="#i-gear"/></svg>Einstell.</a>
+    </nav>
+
+    <aside class="list">
+      <h2>Dashboards</h2>
+      <div class="li cur" style="--a: var(--c-pc)"><span class="ico"><svg class="icon"><use href="#i-tv"/></svg></span><div><b>Schreibtisch</b><small>läuft auf Bildschirm 2</small></div></div>
+      <div class="li" style="--a: var(--c-app)"><span class="ico"><svg class="icon"><use href="#i-tv"/></svg></span><div><b>Wohnzimmer</b><small>aus</small></div></div>
+      <button class="btn add"><svg class="icon"><use href="#i-plus"/></svg>Neues Dashboard</button>
+      <div class="grp">Anzeige</div>
+      <div class="fld" style="padding:0 12px">
+        <label>Bildschirm</label>
+        <div class="select">Bildschirm 2 · LG TV <span class="sub">▾</span></div>
+        <small>Startet mit Windows im Vollbild.</small>
+      </div>
+      <div class="sw" style="padding:12px 12px 0; border:0"><div><b>Bei Alarm umschalten</b><small>auf die Alarm-Ansicht</small></div><span class="tog on"></span></div>
+      <div class="sw" style="padding:12px"><div><b>Zurück nach</b><small>wenn niemand „Einsatz beenden“ drückt</small></div><span class="mono" style="font-size:15px; white-space:nowrap">60 min</span></div>
+    </aside>
+
+    <section class="main">
+      <div class="mh">
+        <h1>Schreibtisch</h1>
+        <div class="seg lg"><button aria-pressed="true">Ruhe</button><button aria-pressed="false">Alarm</button></div>
+        <span class="sp"></span>
+        <button class="btn">Testalarm anzeigen</button>
+        <button class="btn" style="background:var(--signal); color:#fff">Auf Bildschirm 2 zeigen</button>
+      </div>
+
+      <div class="canvas" aria-label="Raster 12 × 6">
+        <!-- Hintergrund-Zellen (frei) -->
+        <div class="cell" style="grid-area: 6 / 10"></div><div class="cell" style="grid-area: 6 / 11"></div><div class="cell" style="grid-area: 6 / 12"></div>
+
+        <div class="k" style="grid-area: 1 / 1 / 3 / 4"><div class="th"><span class="ico"><svg class="icon"><use href="#i-clock"/></svg></span>Uhr</div><span class="sz">3 × 2</span></div>
+        <div class="k divera" style="grid-area: 3 / 1 / 4 / 4"><div class="th"><span class="ico"><svg class="icon"><use href="#i-people"/></svg></span>Mein Divera-Status</div><span class="sz">3 × 1</span></div>
+        <div class="k haus" style="grid-area: 4 / 1 / 5 / 4"><div class="th"><span class="ico"><svg class="icon"><use href="#i-home"/></svg></span>Bereitschaft</div><span class="sz">3 × 1</span></div>
+        <div class="k haus" style="grid-area: 5 / 1 / 7 / 4"><div class="th"><span class="ico"><svg class="icon"><use href="#i-hub"/></svg></span>Systemstatus</div><span class="sz">3 × 2</span></div>
+        <div class="k divera sel" style="grid-area: 1 / 4 / 3 / 7"><div class="th"><span class="ico"><svg class="icon"><use href="#i-people"/></svg></span>Verfügbarkeit</div><span class="sz">3 × 2</span></div>
+        <div class="k divera" style="grid-area: 3 / 4 / 5 / 7"><div class="th"><span class="ico"><svg class="icon"><use href="#i-truck"/></svg></span>Fahrzeuge</div><span class="sz">3 × 2</span></div>
+        <div class="k" style="grid-area: 5 / 4 / 7 / 7"><div class="th"><span class="ico"><svg class="icon"><use href="#i-cloud"/></svg></span>Wetter</div><span class="sz">3 × 2</span></div>
+        <div class="k divera" style="grid-area: 1 / 7 / 4 / 10"><div class="th"><span class="ico"><svg class="icon"><use href="#i-cal"/></svg></span>Termine</div><span class="sz">3 × 3</span></div>
+        <div class="k divera" style="grid-area: 4 / 7 / 7 / 10"><div class="th"><span class="ico"><svg class="icon"><use href="#i-mega"/></svg></span>Mitteilungen</div><span class="sz">3 × 3</span></div>
+        <div class="k wehr" style="grid-area: 1 / 10 / 4 / 13"><div class="th"><span class="ico"><svg class="icon"><use href="#i-list"/></svg></span>Letzte Einsätze</div><span class="sz">3 × 3</span></div>
+        <div class="k wehr" style="grid-area: 4 / 10 / 6 / 13"><div class="th"><span class="ico"><svg class="icon"><use href="#i-chart"/></svg></span>Statistik</div><span class="sz">3 × 2</span></div>
+        <div class="free" style="grid-area: 6 / 10 / 7 / 13">Hier ablegen</div>
+      </div>
+
+      <div class="palette">
+        <h2>Kachel hinzufügen</h2>
+        <div class="pal-row"><span class="pal-lbl">Heimalarm</span>
+          <span class="pk alarm"><i><svg class="icon"><use href="#i-bell"/></svg></i>Aktueller Alarm</span>
+          <span class="pk haus"><i><svg class="icon"><use href="#i-home"/></svg></i>Wer fährt?</span>
+          <span class="pk haus used"><i><svg class="icon"><use href="#i-home"/></svg></i>Bereitschaft</span>
+          <span class="pk haus used"><i><svg class="icon"><use href="#i-hub"/></svg></i>Systemstatus</span>
+          <span class="pk haus"><i><svg class="icon"><use href="#i-bulb"/></svg></i>Geräte</span>
+          <span class="pk haus"><i><svg class="icon"><use href="#i-flow"/></svg></i>Routinen</span>
+          <span class="pk haus"><i><svg class="icon"><use href="#i-chat"/></svg></i>Protokoll</span>
+        </div>
+        <div class="pal-row"><span class="pal-lbl">Einsätze</span>
+          <span class="pk wehr used"><i><svg class="icon"><use href="#i-list"/></svg></i>Letzte Einsätze</span>
+          <span class="pk wehr used"><i><svg class="icon"><use href="#i-chart"/></svg></i>Statistik</span>
+        </div>
+        <div class="pal-row"><span class="pal-lbl">Divera</span>
+          <span class="pk divera used"><i><svg class="icon"><use href="#i-people"/></svg></i>Mein Status</span>
+          <span class="pk divera"><i><svg class="icon"><use href="#i-people"/></svg></i>Rückmeldungen</span>
+          <span class="pk divera used"><i><svg class="icon"><use href="#i-people"/></svg></i>Verfügbarkeit</span>
+          <span class="pk divera used"><i><svg class="icon"><use href="#i-truck"/></svg></i>Fahrzeuge</span>
+          <span class="pk divera used"><i><svg class="icon"><use href="#i-cal"/></svg></i>Termine</span>
+          <span class="pk divera used"><i><svg class="icon"><use href="#i-mega"/></svg></i>Mitteilungen</span>
+        </div>
+        <div class="pal-row"><span class="pal-lbl">Extra</span>
+          <span class="pk used"><i><svg class="icon"><use href="#i-clock"/></svg></i>Uhr</span>
+          <span class="pk used"><i><svg class="icon"><use href="#i-cloud"/></svg></i>Wetter</span>
+          <span class="pk"><i><svg class="icon"><use href="#i-note"/></svg></i>Notiz</span>
+          <span class="pk"><i><svg class="icon"><use href="#i-image"/></svg></i>Logo / Bild</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <h2><span class="ico"><svg class="icon"><use href="#i-people"/></svg></span>Verfügbarkeit der Einheit</h2>
+      <div class="fld">
+        <label>Größe</label>
+        <div class="steppers">
+          <div class="stepper"><button>−</button><span>3 breit</span><button>+</button></div>
+          <div class="stepper"><button>−</button><span>2 hoch</span><button>+</button></div>
+        </div>
+      </div>
+      <div class="fld">
+        <label>Einheit</label>
+        <div class="select">LZ 1 <span class="sub">▾</span></div>
+      </div>
+      <div class="fld">
+        <label>Darstellung</label>
+        <div class="seg" style="width:fit-content"><button aria-pressed="true">Balken + Zahlen</button><button aria-pressed="false">Nur Zahlen</button></div>
+      </div>
+      <div>
+        <div class="sw"><div><b>„Keine Angabe“ zeigen</b><small>Wer keinen Status gesetzt hat</small></div><span class="tog on"></span></div>
+        <div class="sw"><div><b>Auch in der Alarm-Ansicht</b><small>Kachel wird dort mit angelegt</small></div><span class="tog"></span></div>
+      </div>
+      <div class="infobox">Kommt aus Divera. Sichtbar ist nur, was dein Divera-Schlüssel sehen darf.</div>
+      <button class="btn del">Kachel entfernen</button>
+    </aside>
+
+  </div></div></div>
+</section>
+
+</main>
+
+<script>
+  // Nur Mockup-Bedienung: Ansicht, Farbschema, Skalierung
+  const fit = () => {
+    const w = Math.min(document.documentElement.clientWidth - 32, 1920);
+    document.querySelectorAll(".frame").forEach((f) => {
+      const base = f.classList.contains("app") ? 1600 : 1920;
+      f.style.setProperty("--k", Math.min(1, w / base));
+    });
+  };
+  addEventListener("resize", fit); fit();
+  const pick = (group, attr, fn) => document.getElementById(group).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    document.querySelectorAll(`#${group} button`).forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    fn(b.dataset[attr]);
+  });
+  pick("views", "v", (v) => document.querySelectorAll("[data-view]").forEach((s) => (s.hidden = s.dataset.view !== v)));
+  pick("theme", "t", (t) => (document.documentElement.dataset.theme = t));
+</script>
+</body>
+</html>

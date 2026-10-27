@@ -17,6 +17,7 @@ import { showTakeover } from "./views/takeover.js";
 import { devicesView } from "./views/devices.js";
 import { routinesView } from "./views/routines.js";
 import { diagnoseView } from "./views/diagnose.js";
+import { dashboardView, dashDragging } from "./views/dashboard.js";
 import { wizardView, wizardKeys } from "./views/wizard.js";
 import { needsWizard, startWizard, refreshAndroid } from "./core/wizard.js";
 import { initAndroid } from "./core/android.js";
@@ -29,10 +30,11 @@ import { initLocalRoutines } from "./core/routines-local.js";
 import { initDiscord } from "./core/discord.js";
 import { initReadiness } from "./core/readiness.js";
 import { initCheckup } from "./core/checkup.js";
+import { initTv } from "./core/tvlink.js";
 
 const routes = {
   uebersicht: overview, geraete: devicesView, routinen: routinesView,
-  einsaetze: einsaetzeView, protokoll: logView, einstellungen: settingsView, diagnose: diagnoseView, einrichtung: wizardView,
+  einsaetze: einsaetzeView, protokoll: logView, dashboard: dashboardView, einstellungen: settingsView, diagnose: diagnoseView, einrichtung: wizardView,
 };
 const NAV_OF = { diagnose: "einstellungen", einrichtung: "einstellungen" };
 const view = document.getElementById("view");
@@ -57,6 +59,7 @@ function render() {
   // Geräte und Routinen gibt es nur mit Zentrale
   document.querySelectorAll('.nav-item[data-route="geraete"], .nav-item[data-route="routinen"]').forEach((a) => { a.hidden = !has.routines(); });
   document.querySelectorAll('.nav-item[data-route="einsaetze"]').forEach((a) => { a.hidden = !has.logbuch(); });
+  document.querySelectorAll('.nav-item[data-route="dashboard"]').forEach((a) => { a.hidden = !hasPcFeatures; });
   document.querySelectorAll(".nav-item").forEach((a) => {
     if (a.dataset.route === (NAV_OF[name] || name)) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
@@ -82,7 +85,7 @@ function renderConn() {
 
 // Neu zeichnen, ohne Eingaben, Dialoge oder Regler zu stören
 let pending = 0;
-const busy = () => document.querySelector(".dialog-wrap") || ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
+const busy = () => document.querySelector(".dialog-wrap") || dashDragging() || ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
 const live = () => {
   clearTimeout(pending);
   pending = setTimeout(() => { if (current() === "einstellungen" || busy()) renderConn(); else render(); }, 120);
@@ -115,6 +118,7 @@ on("divera", live);
 on("direct", live);
 on("update", live);
 on("wizard", live);
+on("board", () => { if (current() === "dashboard") live(); });
 document.addEventListener("keydown", wizardKeys);
 // Zurück aus den Android-Einstellungen (Benachrichtigungszugriff, Akku): Haken sofort prüfen
 document.addEventListener("visibilitychange", () => { if (!document.hidden && isAndroid) refreshAndroid(); });
@@ -150,6 +154,7 @@ restartDivera();
 startReceiver();
 startSync();
 initCheckup();
+initTv().catch((e) => log("warn", "Dashboard-Fenster nicht verfügbar", String(e)));
 on("sync-applied", (secs) => { if (secs.includes("betrieb")) connect(); render(); });
 initAndroid().catch((e) => log("warn", "Android-Funktionen nicht verfügbar", String(e)));
 initUpdates();

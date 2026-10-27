@@ -33,19 +33,19 @@ mod pipe {
         buf.extend_from_slice(&op.to_le_bytes());
         buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
         buf.extend_from_slice(data.as_bytes());
-        f.write_all(&buf).map_err(|e| format!("Senden an Discord: {e}"))
+        f.write_all(&buf).map_err(|e| format!("Discord-Status nicht gesendet ({e})"))
     }
 
     pub fn read(f: &mut File) -> Result<(u32, String), String> {
         let mut head = [0u8; 8];
-        f.read_exact(&mut head).map_err(|e| format!("Antwort von Discord: {e}"))?;
+        f.read_exact(&mut head).map_err(|e| format!("Keine Antwort von Discord ({e})"))?;
         let op = u32::from_le_bytes([head[0], head[1], head[2], head[3]]);
         let len = u32::from_le_bytes([head[4], head[5], head[6], head[7]]) as usize;
         if len > 1 << 20 {
             return Err("Antwort von Discord zu groß".into());
         }
         let mut body = vec![0u8; len];
-        f.read_exact(&mut body).map_err(|e| format!("Antwort von Discord: {e}"))?;
+        f.read_exact(&mut body).map_err(|e| format!("Keine Antwort von Discord ({e})"))?;
         Ok((op, String::from_utf8_lossy(&body).into_owned()))
     }
 }

@@ -167,7 +167,7 @@ export function initDiscord() {
     discord.active = act;
     push(buildActivity(cfg(), act.ev, act.start));
   });
-  on("restore", () => { if (loadActive() && cfg().clearOnRestore !== false) endPresence("„Wieder da“"); });
+  on("restore", () => { if (loadActive() && cfg().clearOnRestore !== false) endPresence("„Einsatz beenden“"); });
   on("settings", ({ path }) => {
     if (path === "discord.enabled" && !settings().discord.enabled) endPresence("ausgeschaltet");
   });

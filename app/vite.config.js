@@ -16,9 +16,9 @@ export default defineConfig({
     "import.meta.env.ZENTRALE_VERSION": JSON.stringify(dienst.version),
     "import.meta.env.ESP_FW": JSON.stringify(fw),
   },
-  // mirror.html = „Fährst du?“ auf weiteren Bildschirmen (src-tauri/src/takeover.rs)
+  // mirror.html = „Fährst du?“ auf weiteren Bildschirmen (src-tauri/src/takeover.rs), tv.html = Dashboard (src-tauri/src/tv.rs)
   build: {
     target: "es2022", outDir: "dist", emptyOutDir: true,
-    rollupOptions: { input: { main: "index.html", mirror: "mirror.html" } },
+    rollupOptions: { input: { main: "index.html", mirror: "mirror.html", tv: "tv.html" } },
   },
 });

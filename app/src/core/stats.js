@@ -10,6 +10,7 @@ import { settings } from "./settings.js";
 /** Logbuch ist eine Zusatzfunktion: ohne Einschalten wird nichts gespeichert. */
 const on = () => Boolean(settings().features?.logbuch);
 import { platformName } from "./platform.js";
+import { parseSybos } from "./sybos.js";
 
 const KEY = "heimalarm.stats.v1";
 const MAX = 1000;
@@ -38,10 +39,20 @@ export function pickDetails(obj, skip = []) {
   return out;
 }
 
+/** Ältere SYBOS-Einträge mit Roh-Titel („ALARMIERUNG (LOHBR1) - 08:22:28 - ALARM“) nachträglich zerlegen. */
+function fixSybos(e) {
+  const sy = e && !e.deleted ? parseSybos(e.keyword, e.text) : null;
+  if (!sy) return e;
+  const out = { ...e, keyword: sy.keyword, text: sy.text || "" };
+  if (sy.unit) { out.unit ||= sy.unit; out.units = [...new Set([...(e.units || []), sy.unit])]; }
+  if (Object.keys(sy.details).length) out.details = { ...sy.details, ...e.details };
+  return out;
+}
+
 function load() {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || "null");
-    if (Array.isArray(v)) return v.map((e) => ({ id: e.id || newId(), sources: e.sources || (e.source ? [e.source] : []), ...e }));
+    if (Array.isArray(v)) return v.map((e) => fixSybos({ id: e.id || newId(), sources: e.sources || (e.source ? [e.source] : []), ...e }));
   } catch { /* leer */ }
   // Erster Start: frühere eigene Alarme aus dem Protokoll übernehmen
   return getLog("alarm")
@@ -168,8 +179,9 @@ export function clearStats() {
 export function mergeEinsaetze(remote) {
   if (!Array.isArray(remote) || !on()) return false;
   let changed = false;
-  for (const r of remote) {
-    if (!r || typeof r.ts !== "number") continue;
+  for (const raw of remote) {
+    if (!raw || typeof raw.ts !== "number") continue;
+    const r = fixSybos(raw);
     const l = list.find((e) => e.id === r.id) || list.find((e) => !e.deleted && !r.deleted && Math.abs(e.ts - r.ts) <= SAME_MS);
     if (!l) { list.push(structuredClone(r)); changed = true; continue; }
     const before = JSON.stringify(l);

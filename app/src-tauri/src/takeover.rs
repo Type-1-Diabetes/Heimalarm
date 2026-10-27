@@ -10,7 +10,7 @@ const MIRROR_PREFIX: &str = "takeover-";
 /// Gleiche WebView2-Argumente wie das Hauptfenster (tauri.conf.json → additionalBrowserArgs).
 /// Unterschiedliche Argumente im selben Programm lässt WebView2 nicht zu.
 #[cfg(desktop)]
-const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows";
+pub(crate) const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows";
 
 #[tauri::command]
 pub async fn takeover_open(app: tauri::AppHandle, on: bool) -> Result<(), String> {
@@ -25,7 +25,7 @@ pub async fn takeover_open(app: tauri::AppHandle, on: bool) -> Result<(), String
 
 #[cfg(desktop)]
 fn open(app: tauri::AppHandle, on: bool) -> Result<(), String> {
-    let main = app.get_webview_window("main").ok_or("Hauptfenster fehlt")?;
+    let main = app.get_webview_window("main").ok_or("Alarmfenster ließ sich nicht öffnen")?;
     // alte Zusatzfenster immer schließen
     for (label, w) in app.webview_windows() {
         if label.starts_with(MIRROR_PREFIX) {

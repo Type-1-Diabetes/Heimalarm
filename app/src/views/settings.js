@@ -133,7 +133,7 @@ function betrieb(rerender) {
       syncHint,
       h("small.meta", {}, "Handy und PC müssen im selben WLAN sein."));
   };
-  return section("betrieb", "Betrieb", "Wie der Alarm zu deinen Geräten kommt. Stellst du es hier um, übernehmen gekoppelte PCs und Handys die Einstellung beim nächsten Abgleich.",
+  return section("betrieb", "Betrieb", "",
     modeChoice((v) => { set("mode", v); connect(); startReceiver(); rerender(); }),
     h("details.item.flow-wrap", {}, h("summary", {}, h("b", {}, "So läuft ein Alarm")), setupFlow()),
     hasPcFeatures ? pcPart() : phonePart(),
@@ -144,14 +144,14 @@ function betrieb(rerender) {
 
 function verbindung(rerender) {
   const host = settings().broker.host;
-  return section("verbindung", "Verbindung", "Die Zentrale ist ein Gerät, das rund um die Uhr läuft: NAS, Mini-PC oder Raspberry Pi (ein alter Laptop geht auch, darf aber nie schlafen). Darauf läuft der Ordner „zentrale“ aus Heimalarm. Ohne sie kommt kein Melder-Alarm an.",
+  return section("verbindung", "Verbindung", "Gerät, das immer läuft (NAS, Mini-PC, Raspberry Pi). Ohne Zentrale kein Melder-Alarm.",
     h("div.fields", {},
       field("Adresse", text("broker.host", { placeholder: "z. B. 192.168.1.10", inputmode: "url", autocomplete: "off" }), "Die feste IP der Zentrale. Im WLAN-Router für dieses Gerät eine feste IP-Adresse einstellen."),
       field("Port", text("broker.port", { type: "number", min: 1, max: 65535 }), "Fast immer 9001 – nur ändern, wenn du ihn in der Zentrale geändert hast."),
       field("Benutzer", text("broker.user", { autocomplete: "off" }), "Fast immer „heimalarm“."),
       field("Passwort", text("broker.pass", { type: "password", autocomplete: "off" }), "Das Passwort, das du beim Einrichten der Zentrale in die Datei .env geschrieben hast (MQTT_PASSWORD).")),
     toggle("broker.tls", "Verschlüsselt (TLS)", "Im Heimnetz nicht nötig. Nur einschalten, wenn deine Zentrale dafür eingerichtet ist. Sonst klappt die Verbindung nicht."),
-    host && !PRIVATE.test(host) && h("div.banner.warn", {}, h("div", {}, h("b", {}, "Adresse liegt nicht im Heimnetz"), "Heimalarm ist fürs Heimnetz gedacht. Stell die Zentrale nicht offen ins Internet. Für unterwegs eignet sich z. B. ein VPN über deinen Router. Frag im Zweifel jemanden mit Erfahrung.")),
+    host && !PRIVATE.test(host) && h("div.banner.warn", {}, h("div", {}, h("b", {}, "Adresse liegt nicht im Heimnetz"), "Heimalarm ist fürs Heimnetz gedacht. Stell die Zentrale nicht offen ins Internet. Für unterwegs eignet sich z. B. ein VPN über deinen Router.")),
     h("div.row", {}, h("button.btn.primary", { onclick: () => { connect(); toast("Verbinde mit der Zentrale …"); setTimeout(rerender, 1500); } }, "Speichern & verbinden")),
   );
 }
@@ -219,7 +219,7 @@ function sourceRow({ id, title, summary, on, onToggle, badge, body }) {
 
 /** Benachrichtigung mitlesen (nur Android) – auf PC nur Hinweis. */
 function notifGroup(id, rerender) {
-  if (!isAndroid) return group("Alarm empfangen", h("p.meta", {}, id === "divera" ? "Am Handy liest Heimalarm die Divera-Benachrichtigung mit. Am PC fragt Heimalarm Divera direkt ab. Dafür unten den Zugangsschlüssel eintragen." : "Das Handy liest mit und gibt den Alarm über die Zentrale an diesen PC."));
+  if (!isAndroid) return group("Alarm empfangen", h("p.meta", {}, id === "divera" ? "Am Handy liest Heimalarm die Divera-Benachrichtigung mit. Am PC fragt Heimalarm Divera direkt ab. Dafür unten den Divera-Schlüssel eintragen." : "Das Handy liest mit und gibt den Alarm über die Zentrale an diesen PC."));
   return group("Alarm empfangen",
     h("div.inline", {},
       field("App auf dem Handy", text(`alarm.apps.${id}.pkg`, { autocomplete: "off", placeholder: "über „Erkennen“ wählen" }), "Paketname, ein Teil reicht."),
@@ -247,13 +247,13 @@ function diveraSource(rerender) {
     body: [
       group("Zugang",
         h("div.inline", {},
-          field("Persönlicher Zugangsschlüssel (in Divera „Accesskey“)", h("input.input", { type: "password", autocomplete: "off", spellcheck: "false", value: d.key, placeholder: "dvpat-…",
-            onchange: (e) => { set("divera.key", e.target.value.trim()); restartDivera(); rerender(); } }), "Divera → Profil → Login → API-Schlüssel. Bleibt auf diesem Gerät."),
+          field("Divera-Schlüssel (in Divera: Accesskey)", h("input.input", { type: "password", autocomplete: "off", spellcheck: "false", value: d.key, placeholder: "dvpat-…",
+            onchange: (e) => { set("divera.key", e.target.value.trim()); restartDivera(); rerender(); } }), "Divera im Browser → Einstellungen → Debug → Accesskey. Bleibt auf diesem Gerät."),
           h("button.btn.small", { onclick: load, disabled: !d.key }, d.unit ? "Neu laden" : "Verbinden")),
         divera.ok === false && h("p.meta.err", {}, divera.error)),
       notifGroup("divera", rerender),
       d.key && h("div.group-cont", {},
-        toggle("divera.poll", "Bei Divera abfragen", "Ohne Benachrichtigung, solange die App läuft.", () => { restartDivera(); rerender(); }),
+        toggle("divera.poll", "Bei Divera abfragen", "Auch ohne Divera-Mitteilung, solange die App läuft.", () => { restartDivera(); rerender(); }),
         d.poll && field("Abfrage alle (Sekunden)", text("divera.pollSec", { type: "number", min: 10, max: 300 }, { onSave: restartDivera }), "15–30 s reichen.")),
       d.key && group("Rückmeldung bei Antwort (optional)",
         h("p.meta", {}, "Nach „Fährst du?“ am PC oder per Karte in der Übersicht. Beides ist aus, bis du es einschaltest."),
@@ -280,7 +280,7 @@ function diveraOnZentrale(rerender) {
   const me = settings().alarm.me, info = state.diveraKeys?.[me];
   const send = (key) => { publish("heimalarm/cmd/divera/key", { who: me, key }); toast(key ? "Wird geprüft …" : "Schlüssel auf der Zentrale gelöscht"); setTimeout(rerender, 2500); };
   return group("Divera-Status per Routine",
-    h("p.meta", {}, "Damit setzt die Zentrale deinen Divera-Status per Routine (z. B. ab 22 Uhr „Nicht verfügbar“), auch wenn dein Handy aus ist. Der Schlüssel liegt dann zusätzlich auf der Zentrale. Andere Geräte bekommen ihn nicht."),
+    h("p.meta", {}, "Damit setzen Routinen der Zentrale deinen Divera-Status, auch wenn das Handy aus ist. Der Schlüssel liegt dafür auf der Zentrale."),
     info?.ok === false && h("p.meta.err", {}, `Nicht übernommen: ${info.error}`),
     h("div.row", {},
       info?.ok ? h("span.badge", {}, `Hinterlegt für „${me}“`) : null,
@@ -299,7 +299,7 @@ function apagerSource(rerender) {
     body: [
       notifGroup("apager", rerender),
       group("Webhook (Smart-Home-Paket in aPager)",
-        h("p.meta", {}, "aPager auf dem Handy ruft bei Alarm eine Adresse auf. Mit dabei sind Stichwort und Einheit, der Alarmtext fehlt. In aPager unter Einstellungen → Labor → Webhooks eintragen und in der Einheit „Webhooks aktivieren“."),
+        h("p.meta", {}, "aPager ruft bei Alarm eine Adresse auf (nur Stichwort und Einheit). So geht’s: 1. In aPager Einstellungen → Labor → Webhooks öffnen. 2. Adresse unten eintragen. 3. In der Einheit „Webhooks aktivieren“. Smart-Home-Paket nötig."),
         h("p.meta", {}, "An die Zentrale: Adresse unter ", h("a", { href: "#/einstellungen/zentrale" }, "Zentrale"), ". Geht von überall, wenn die Zentrale erreichbar ist."),
         hasPcFeatures ? h("div.field", {}, h("span", {}, "Direkt an diesen PC (ohne Zentrale)"),
           webhookUrl() ? h("code", { style: "overflow-wrap:anywhere" }, webhookUrl()) : h("small", {}, "Startet gerade …"),
@@ -312,7 +312,7 @@ function apagerSource(rerender) {
         h("div.inline", {},
           field("API-Schlüssel", h("input.input", { type: "password", autocomplete: "off", value: a.key, onchange: (e) => { set("apager.key", e.target.value.trim()); rerender(); } }),
             "aPager → Verfügbarkeit → Zahnrad → Externer Zugriff. Smart-Home-Abo nötig."),
-          h("button.btn.small", { disabled: !a.key, onclick: async () => { const r = await answerApager(true, { quiet: true }); toast(r.code === 204 ? "Schlüssel ok – gerade kein Alarm" : r.text); } }, "Prüfen")),
+          h("button.btn.small", { disabled: !a.key, onclick: async () => { const r = await answerApager(true, { quiet: true }); toast(r.code === 204 ? "Schlüssel gültig" : r.text); } }, "Prüfen")),
         a.key && toggle("apager.feedback", "Zusage / Absage senden", "„Ich fahre“ = komme, „Ich fahre nicht“ = komme nicht. Nur Alarme der letzten 3 Minuten."),
         a.key && toggle("apager.silent", "Ohne Bestätigungs-Push", "aPager zeigt dann keine eigene Meldung.")),
     ],
@@ -415,7 +415,7 @@ function sprache(rerender) {
     h("div.item", {},
       h("div.item-head", {}, h("b", {}, "Matter-Geräte in Heimalarm"),
         state.matter?.length ? h("span.chip.ok", {}, `${state.matter.length} Gerät${state.matter.length === 1 ? "" : "e"}`) : h("span.chip", {}, "keine")),
-      h("p.meta", {}, "Umgekehrter Weg: Lampen und Steckdosen, die schon in Alexa, Google Home, SmartThings oder Smart Life sind, kann auch Heimalarm steuern, in Routinen und unter Licht & Geräte. In Alexa und Google bleiben sie trotzdem."),
+      h("p.meta", {}, "Geräte aus Alexa, Google Home & Co. kann auch Heimalarm schalten. Dort bleiben sie erhalten."),
       h("div.row", {}, h("a.btn.small", { href: "#/geraete/matter" }, "Matter-Gerät hinzufügen"))),
     h("p.meta", {}, "Nötig: ein Echo mit Matter-Unterstützung bzw. ein Nest-Lautsprecher, Nest Hub oder Google TV im selben WLAN."),
   );
@@ -541,7 +541,7 @@ function androidSection(rerender) {
   const restartBlocked = a.restart !== false && s.overlayAllowed === false;
   return section("android", "Android", "Damit Alarme auch ankommen, wenn die App im Hintergrund ist.",
     switchRow("Hintergrund-Dienst", "Dauerhafte Mitteilung, Android beendet die App dann nicht.", a.service, (v) => setBackgroundService(v).then(() => { android = null; rerender(); })),
-    switchRow("Automatisch neu starten", "Wurde Heimalarm beendet oder weggewischt, startet es sich im Hintergrund wieder. Auch nach dem Einschalten des Handys und bei einem Alarm.",
+    switchRow("Automatisch neu starten", "Startet Heimalarm neu, wenn es beendet wurde, auch nach einem Neustart des Handys.",
       a.restart !== false, (v) => { set("android.restart", v); rerender(); }),
     restartBlocked && h("div.item", {}, h("div.item-head", {}, h("b", {}, "Über anderen Apps einblenden"), h("span.chip.bad", {}, "nicht erlaubt")),
       h("small", {}, "Ohne diese Erlaubnis darf sich Heimalarm nicht selbst starten."),
@@ -556,7 +556,7 @@ function androidSection(rerender) {
         : "Samsung beendet Apps trotzdem. Einstellungen → Akku → Hintergrundnutzungslimits → „Nie in den Standby versetzte Apps“ → Heimalarm hinzufügen."),
       h("div.row", {},
         h("button.btn.small", { onclick: () => openAppDetails().then(recheck) }, "App-Infos öffnen"),
-        s.samsung && !sleeping(s) && !a.samsungDone && h("button.btn.small", { onclick: () => { set("android.samsungDone", true); rerender(); } }, "Ist eingetragen"))),
+        s.samsung && !sleeping(s) && !a.samsungDone && h("button.btn.small", { onclick: () => { set("android.samsungDone", true); rerender(); } }, "Eingetragen"))),
     h("div.item", {}, h("div.item-head", {}, h("b", {}, "Benachrichtigungen mitlesen"), s.notificationAccess ? h("span.chip.ok", {}, "erlaubt") : h("span.chip", {}, "nicht erlaubt")),
       !s.notificationAccess && h("button.btn.small", { onclick: () => openNotificationAccess() }, "Zugriff erlauben")),
     s.fullScreenAllowed === false && h("div.item", {}, h("div.item-head", {}, h("b", {}, "Vollbild-Meldungen"), h("span.chip.bad", {}, "nicht erlaubt")),
@@ -598,11 +598,11 @@ function phoneAlarmSettings(s, rerender) {
       h("small", {}, PHONE_MODES[pm])),
 
     pm === "app" && s.overlayAllowed === false && needs("Aus dem Hintergrund öffnen",
-      "Ohne diese Erlaubnis öffnet sich die Alarm-App erst, wenn du die Heimalarm-Meldung antippst. Android-Name: „Über anderen Apps einblenden“.",
+      "Ohne diese Erlaubnis öffnet sich die Alarm-App erst, wenn du die Heimalarm-Mitteilung antippst. Android-Name: „Über anderen Apps einblenden“.",
       "Erlauben", openOverlaySettings),
 
     pm === "heimalarm" && toggle("phone.ask", "Abfrage „Fährst du?“ öffnen", "Aus: kein Abfrage-Bildschirm, nur Mitteilung, Ton und Vibration. Rückmeldung dann in der Alarm-App.", () => rerender()),
-    pm === "heimalarm" && toggle("phone.notify", "Mitteilung anzeigen", "Meldung in der Statusleiste mit Stichwort. Aus: keine Mitteilung von Heimalarm, die Alarm-App meldet sich ja selbst.", () => rerender()),
+    pm === "heimalarm" && toggle("phone.notify", "Mitteilung anzeigen", "Mitteilung in der Statusleiste mit Stichwort. Aus: keine Mitteilung von Heimalarm, die Alarm-App meldet sich ja selbst.", () => rerender()),
     pm === "heimalarm" && ph.ask !== false && ph.notify !== false && toggle("phone.fullscreen", "Groß anzeigen, auch auf dem Sperrbildschirm", "Bei eigenem Alarm erscheint Heimalarm über allem, mit Knopf „Stopp“.", () => rerender()),
     pm === "heimalarm" && ph.ask !== false && ph.notify === false && h("p.meta", {}, "Ohne Mitteilung erscheint die Abfrage nur, wenn Heimalarm gerade offen ist."),
     pm === "heimalarm" && ph.ask === false && ph.notify === false && !ph.sound && ph.vibrate === false && h("p.meta", {}, "So meldet sich das Handy bei Alarm gar nicht. Routinen, Weiterleiten an den PC und Logbuch laufen weiter."),
@@ -644,8 +644,8 @@ function funktionen(rerender) {
 
 function geraet() {
   return section("geraet", "Dieses Gerät", "So erscheint die App bei den anderen unter „Verbundene Apps“.",
-    field("Gerätename", text("device.name", { placeholder: hasPcFeatures ? "z. B. PC Arbeitszimmer" : "z. B. Handy Daniel", autocomplete: "off" }, { onSave: () => connect() })),
-    toggle("notify.enabled", "Benachrichtigung bei Alarm", hasPcFeatures ? "Für Alarme anderer Personen. Eigene Alarme zeigen die Abfrage." : "Systemmeldung, auch im Hintergrund."),
+    field("Gerätename", text("device.name", { placeholder: hasPcFeatures ? "z. B. PC Arbeitszimmer" : "z. B. Handy Alex", autocomplete: "off" }, { onSave: () => connect() })),
+    toggle("notify.enabled", "Mitteilung bei Alarm", hasPcFeatures ? "Für Alarme anderer Personen. Eigene Alarme zeigen die Abfrage." : "Systemmeldung, auch im Hintergrund."),
     toggle("sync.enabled", "Einstellungen abgleichen", "Einstellungen mit der Zentrale und gekoppelten Geräten abgleichen. Schlüssel für Divera und aPager bleiben immer hier."),
     !hasPcFeatures && settings().sync?.enabled !== false && field("Abgleich ohne Zentrale alle",
       select([["30", "30 Sekunden"], ["60", "1 Minute"], ["120", "2 Minuten"], ["300", "5 Minuten"], ["900", "15 Minuten"]], String(settings().sync?.intervalSec || 120), (v) => set("sync.intervalSec", Number(v))),
@@ -686,9 +686,9 @@ function zentrale(rerender) {
     h("div.field", {}, h("span", {}, "Webhook für aPager PRO"),
       hook ? h("code", { style: "overflow-wrap:anywhere" }, hook) : h("small", {}, "Noch kein Schlüssel – ohne Schlüssel nimmt die Zentrale keine Webhooks an."),
       h("div.row", {},
-        h("button.btn.small", { onclick: async () => { if (await requireAdmin()) { updateShared({ webhookSecret: secretKey() }); rerender(); } } }, hook ? "Neuen Schlüssel" : "Schlüssel erzeugen"),
+        h("button.btn.small", { onclick: async () => { if (await requireAdmin()) { updateShared({ webhookSecret: secretKey() }); rerender(); } } }, hook ? "Neuer Schlüssel" : "Schlüssel erzeugen"),
         hook && h("button.btn.small.ghost", { onclick: () => copyText(hook).then(() => toast("Kopiert")) }, "Kopieren")),
-      h("small", {}, "In aPager PRO unter Einstellungen → Labor → Webhooks eintragen (Smart-Home-Paket nötig) und in der Einheit „Webhooks aktivieren“. aPager liefert nur Stichwort und Einheit. Alarme mehrerer Einheiten zählen als ein Einsatz, ein Rückalarm wird vermerkt.")),
+      h("small", {}, "Einrichten wie unter Alarmquellen → aPager PRO beschrieben. Alarme mehrerer Einheiten zählen als ein Einsatz.")),
   );
 }
 
@@ -711,7 +711,7 @@ function selbsttest(rerender) {
       onclick: () => save({ days: on ? c.days.filter((x) => x !== i + 1) : [...c.days, i + 1].toSorted((a, b) => a - b) }) }, d);
   }));
   return section("selbsttest", "Automatischer Selbsttest", "Die Zentrale prüft regelmäßig, ob alles läuft, und legt unter Test & Diagnose einen Bericht ab. Probleme stehen auch im Protokoll.",
-    switchRow("Selbsttest einschalten", c.enabled ? `Nächste Prüfung: ${selftestWhen()}.` : "Aus – „Jetzt ausführen“ unter Test & Diagnose geht weiter.", c.enabled, (v) => save({ enabled: v })),
+    switchRow("Selbsttest einschalten", c.enabled ? `Nächste Prüfung: ${selftestWhen()}.` : "Aus. Von Hand weiter unter Test & Diagnose.", c.enabled, (v) => save({ enabled: v })),
     c.enabled && h("div.field", {}, h("span", {}, "An diesen Tagen"), dayBtns,
       !c.days.length && h("small.warn", {}, "Kein Tag gewählt – der Selbsttest läuft dann nie.")),
     c.enabled && field("Uhrzeit", h("input.input", { type: "time", value: c.at, onchange: (e) => { if (e.target.value) save({ at: e.target.value }); } }), "Am besten, wenn alle Geräte an sind."),
@@ -869,7 +869,7 @@ const PAGES = () => [
   { grp: "alarm", id: "quellen", label: "Alarmquellen", icon: "bell", color: "--c-alarm", sections: ["quellen"],
     desc: "Melder, SYBOS, aPager, Divera",
     lead: "Woher Heimalarm von einem Einsatz erfährt. Mehrere Quellen gleichzeitig sind normal. Kommt derselbe Alarm doppelt, zählt er als ein Einsatz.",
-    scope: [ALL_MINE, ["lock", "Zugangsschlüssel bleiben auf diesem Gerät"]],
+    scope: [ALL_MINE, ["lock", "Divera- und aPager-Schlüssel bleiben auf diesem Gerät"]],
     status: () => { const n = activeSources().length; return n ? ok(`${n} aktiv`) : warn("keine"); } },
   { grp: "alarm", id: "melder", label: "Melder (ESP32)", icon: "hub", color: "--c-alarm", sections: ["esp32", "led"],
     desc: "Kontakt, Lebenszeichen, LED, Firmware",
@@ -935,7 +935,7 @@ const PAGES = () => [
     warn: () => isConfigured() && !state.connected },
   // App
   { grp: "app", id: "geraet", label: hasPcFeatures ? "Dieser PC" : isAndroid ? "Dieses Handy" : "Dieses Gerät", icon: hasPcFeatures ? "pc" : "phone", color: hasPcFeatures ? "--c-pc" : "--c-phone", sections: ["geraet"],
-    desc: "Name, Benachrichtigung, Abgleich",
+    desc: "Name, Mitteilung, Abgleich",
     lead: "So erscheint dieses Gerät bei den anderen – und was es mit ihnen abgleicht.",
     scope: [ONLY_HERE()],
     status: () => plain(settings().device.name || "") },

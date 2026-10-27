@@ -44,7 +44,7 @@ export function setupFlow() {
       column("Zentrale",
         node("Zentrale", s.broker.host ? `${s.broker.host} · läuft immer` : "Adresse unter „Verbindung“ eintragen", s.broker.host ? state.connected : false)),
       column("Das passiert",
-        node("Alle PCs & Laptops", "mit deiner Kennung: „Fährst du?“, danach Ruhezustand"),
+        node("Alle PCs", "mit deiner Kennung: „Fährst du?“, danach Ruhezustand"),
         node("Handy", "Meldung und Rückmeldung"),
         node("Licht & Alexa", "Routinen der Zentrale")));
   }

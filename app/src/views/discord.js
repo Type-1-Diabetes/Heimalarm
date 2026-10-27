@@ -104,7 +104,7 @@ export function discordSection(rerender) {
 
   const presetNow = Object.entries(PRESETS).find(([, p]) => p.details === c.details && p.state === c.state && p.timer === c.timer)?.[0] || "eigen";
 
-  return section("discord", "Discord-Status", "Zeigt Freunden bei Alarm „Im Einsatz“ im Discord-Profil. Das läuft lokal über das Discord-Programm. Du brauchst keinen Bot und kein Passwort, und Heimalarm schickt nichts an einen Server.",
+  return section("discord", "Discord-Status", "Zeigt Freunden bei Alarm „Im Einsatz“ in Discord. Läuft lokal, ohne Bot und ohne Passwort.",
     h("div.rp-top", {},
       h("div", {},
         toggle("discord.enabled", "Bei Alarm in Discord anzeigen", ready ? "Nur bei deinen eigenen Alarmen." : "Erst die Einrichtung unten abschließen.", () => rerender()),
@@ -136,7 +136,7 @@ export function discordSection(rerender) {
         h("small", {}, c.start === "go" ? "Erst nach deiner Antwort im Fenster „Fährst du?“." : "Schon während „Fährst du?“ noch läuft.")),
       h("div.field", {}, h("span", {}, "Bei „Ich fahre nicht“"),
         segmented([["clear", "Entfernen"], ["keep", "Stehen lassen"]], c.onStay, (v) => setP("onStay", v))),
-      toggle("discord.clearOnRestore", "„Wieder da“ beendet den Status", "Knopf in der Übersicht – ohne Zigbee heißt er dort „Einsatz beenden“."),
+      toggle("discord.clearOnRestore", "„Einsatz beenden“ entfernt den Status", "Knopf in der Übersicht."),
       toggle("discord.resume", "Nach dem Ruhezustand wieder anzeigen", "Im Ruhezustand ist auch Discord aus, Freunde sehen dich dann offline. Wacht der PC vor Ablauf auf, erscheint der Status wieder."),
       toggle("discord.tests", "Auch bei Testalarm", "Sonst nur echte Alarme und Generalprobe.")),
 

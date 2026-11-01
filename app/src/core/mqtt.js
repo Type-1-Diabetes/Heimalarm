@@ -3,7 +3,8 @@ import mqtt from "mqtt";
 import { settings, set, isConfigured } from "./settings.js";
 import { emit, on } from "./events.js";
 import { log } from "./log.js";
-import { platformName } from "./platform.js";
+import { platformName, isAndroid, isTauri } from "./platform.js";
+import { NativeWebSocket } from "./native-ws.js";
 import { receive as receiveShared, bindPublisher } from "./shared.js";
 import { statsEntries, mergeEinsaetze, fingerprint } from "./stats.js";
 
@@ -64,7 +65,9 @@ export function connect() {
   if (!b.host || !isConfigured()) return;
   const url = `${b.tls ? "wss" : "ws"}://${b.host}:${b.port}`;
   lastError = ""; attempts = 0;
-  log("info", "Verbinde mit der Zentrale …", `${url} · Benutzer ${b.user || "(keiner)"}`);
+  // Android: ws:// über den nativen Netzweg – die WebView-Verbindung bleibt dort bei manchen Geräten stumm.
+  const native = isTauri && isAndroid && !b.tls;
+  log("info", "Verbinde mit der Zentrale …", `${url} · Benutzer ${b.user || "(keiner)"}${native ? " · nativ" : ""}`);
   client = mqtt.connect(url, {
     username: b.user || undefined,
     password: b.pass || undefined,
@@ -77,6 +80,7 @@ export function connect() {
     // den blockiert unsere CSP (script-src 'self'), der Ping kam nie an und die Zentrale trennte alle 1,5 × keepalive.
     timerVariant: "native",
     keepalive: 60,
+    ...(native ? { createWebsocket: (u, protocols) => new NativeWebSocket(u, protocols) } : {}),
     will: { topic: clientTopic(), payload: presence(false), retain: true, qos: 1 },
   });
   bindPublisher((t, m, o) => client?.publish(t, m, o));

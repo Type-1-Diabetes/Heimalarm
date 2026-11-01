@@ -1,7 +1,7 @@
 {
   "name": "heimalarm",
   "private": true,
-  "version": "0.1.36",
+  "version": "0.1.37",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
     "@tauri-apps/plugin-http": "^2.8.3",
     "@tauri-apps/plugin-notification": "^2.7.0",
     "@tauri-apps/plugin-opener": "^2.7.2",
+    "@tauri-apps/plugin-websocket": "^2.5.0",
     "mqtt": "^5",
     "qrcode-generator": "^1.5.2",
     "suncalc": "^1.9.0"

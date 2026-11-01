@@ -6,6 +6,9 @@
 
 const CONNECTING = 0, OPEN = 1, CLOSING = 2, CLOSED = 3;
 
+/** Für die Prüfung: Kam die letzte native Verbindung zustande? (opened = Zeitpunkt, 0 = nie) */
+export const nativeWs = { tried: 0, opened: 0, error: "" };
+
 export class NativeWebSocket {
   #ws = null;
   #queue = Promise.resolve();   // Sendereihenfolge sicher einhalten
@@ -29,6 +32,7 @@ export class NativeWebSocket {
   }
 
   async #open(url, protocols) {
+    Object.assign(nativeWs, { tried: Date.now(), opened: 0, error: "" });
     try {
       const { default: WS } = await import("@tauri-apps/plugin-websocket");
       // Mosquitto nimmt die Verbindung nur mit Unterprotokoll „mqtt“ an
@@ -37,8 +41,10 @@ export class NativeWebSocket {
       this.#ws = ws;
       ws.addListener((m) => this.#onMessage(m));
       this.readyState = OPEN;
+      nativeWs.opened = Date.now();
       this.#emit("open");
     } catch (e) {
+      nativeWs.error = String(e?.message || e);
       if (this.readyState === CLOSED) return;
       this.#emit("error", { message: String(e?.message || e) });
       this.#finish(1006, String(e?.message || e));

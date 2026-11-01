@@ -10,7 +10,8 @@ import { startReceiver } from "./direct.js";
 import { has } from "./features.js";
 import { direct, pingPeer } from "./direct.js";
 import { divera, loadDivera } from "./divera.js";
-import { hasPcFeatures, isTauri } from "./platform.js";
+import { hasPcFeatures, isTauri, isAndroid } from "./platform.js";
+import { nativeWs } from "./native-ws.js";
 
 export const checkup = {
   running: false,
@@ -39,10 +40,15 @@ function steps() {
       run: async () => {
         probe = "";
         if (await until(() => state.connected, 8000)) return true;
-        if (!mqttLastError()) probe = await probeZentrale(s.broker);
+        probe = await probeZentrale(s.broker);
         return state.connected;
       },
-      why: () => (mqttLastError() ? explainMqttError(mqttLastError()).join(" · ") : probe || "Keine Antwort in 8 s · Ist die Zentrale an, IP und Port 9001 richtig, PC und Zentrale im selben Netz?") });
+      why: () => {
+        const err = mqttLastError();
+        // Passwort falsch o. Ä. ist eindeutig – sonst die Gegenprobe zeigen, die sagt, wo es hängt
+        if (err && !/timeout|timed out/i.test(err)) return explainMqttError(err).join(" · ");
+        return [probe, err && `(${err})`].filter(Boolean).join(" ") || "Keine Antwort in 8 s · Ist die Zentrale an, IP und Port 9001 richtig, PC und Zentrale im selben Netz?";
+      } });
   }
   // Melder: erst entscheiden, wenn die Zentrale ihre gespeicherten Meldungen geschickt hat.
   if (has.esp()) {
@@ -65,21 +71,30 @@ function steps() {
   return list;
 }
 
-/** Gegenprobe, wenn die App-Verbindung (WebSocket der Oberfläche) stumm bleibt: Port über den nativen
- *  Netzweg der App ansprechen. Unterscheidet „Netz/Firewall blockiert“ von „nur die App-Verbindung kommt nicht durch“. */
+/** Gegenprobe, wenn die Zentrale nicht antwortet: Port über den nativen Netzweg der App ansprechen (nicht die WebView).
+ *  Entscheidet nach der Zeit, nicht nach dem Fehlertext – der native Teil meldet Zeitüberschreitungen nur als
+ *  „error sending request“. Antwort = erreichbar · Fehler nach ≥ 2,8 s = keine Verbindung · schneller Fehler = Port zu. */
 async function probeZentrale(b) {
   if (!isTauri) return "";
   const where = `${b.host}:${b.port}`;
+  const t0 = Date.now();
+  let reached = false;
   try {
     const { fetch } = await import("@tauri-apps/plugin-http");
     await fetch(`http://${where}/`, { method: "GET", connectTimeout: 3000, signal: AbortSignal.timeout(4000) });
+    reached = true;
   } catch (e) {
     const m = String(e?.message || e);
-    if (/timed? ?out|timeout|abort|unreachable|no route/i.test(m)) return `Dieses Gerät erreicht ${where} gar nicht · Gleiches WLAN wie die Zentrale (kein Gastnetz)? VPN oder Werbeblocker-App aus? Firewall der Zentrale/NAS: Port ${b.port} für das ganze Heimnetz freigeben.`;
-    if (/refused/i.test(m)) return `${b.host} antwortet, aber Port ${b.port} ist zu · Läuft der Container mosquitto? Port richtig?`;
+    if (/refused/i.test(m) || Date.now() - t0 < 2800) {
+      // Mosquitto beantwortet einfache Anfragen am WebSocket-Port oft mit Verbindungsabbruch – das heißt: erreichbar
+      if (!/refused/i.test(m)) reached = true;
+      else return `${b.host} antwortet, aber Port ${b.port} ist zu · Läuft der Container mosquitto? Port richtig?`;
+    }
   }
-  // Antwort oder Verbindung kam zustande → das Netz ist ok, nur die WebSocket-Verbindung der App scheitert
-  return `Port ${where} ist erreichbar, aber die App-Verbindung kommt nicht durch · Im WLAN des Geräts einen Proxy eingestellt (WLAN-Einstellungen → Proxy „Keine“)? VPN, Private-DNS- oder Werbeblocker-App aus? Dann „Neu verbinden“.`;
+  const native = isAndroid && !b.tls;
+  if (!reached) return `Dieses Gerät bekommt keine Verbindung zu ${where} (Zeitüberschreitung) · Gleiches WLAN wie die Zentrale (kein Gastnetz, kein Repeater mit eigenem Netz)? Test: im Browser des Geräts http://${b.host}:8080/ öffnen – erscheint „nicht gefunden“, ist die Zentrale erreichbar.`;
+  if (native && nativeWs.tried && !nativeWs.opened) return `Port ${where} ist erreichbar, aber die WebSocket-Verbindung kam nicht zustande${nativeWs.error ? ` (${nativeWs.error})` : ""} · Port 9001 = WebSocket-Listener von mosquitto?`;
+  return `Port ${where} ist erreichbar und die Verbindung steht, aber die Zentrale antwortet nicht auf die Anmeldung · mosquitto neu starten (Container neu starten).`;
 }
 
 let runId = 0;

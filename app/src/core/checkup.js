@@ -10,7 +10,7 @@ import { startReceiver } from "./direct.js";
 import { has } from "./features.js";
 import { direct, pingPeer } from "./direct.js";
 import { divera, loadDivera } from "./divera.js";
-import { hasPcFeatures } from "./platform.js";
+import { hasPcFeatures, isTauri } from "./platform.js";
 
 export const checkup = {
   running: false,
@@ -33,8 +33,17 @@ function steps() {
   const s = settings();
   const list = [];
   // why(): Grund und Hinweis, wenn der Schritt fehlschlägt (landet im Protokoll)
-  if (has.pi()) list.push({ name: `Zentrale ${s.broker.host}:${s.broker.port}`, run: () => until(() => state.connected, 8000),
-    why: () => (mqttLastError() ? explainMqttError(mqttLastError()).join(" · ") : "Keine Antwort in 8 s · Ist die Zentrale an, IP und Port 9001 richtig, PC und Zentrale im selben Netz?") });
+  if (has.pi()) {
+    let probe = "";
+    list.push({ name: `Zentrale ${s.broker.host}:${s.broker.port}`,
+      run: async () => {
+        probe = "";
+        if (await until(() => state.connected, 8000)) return true;
+        if (!mqttLastError()) probe = await probeZentrale(s.broker);
+        return state.connected;
+      },
+      why: () => (mqttLastError() ? explainMqttError(mqttLastError()).join(" · ") : probe || "Keine Antwort in 8 s · Ist die Zentrale an, IP und Port 9001 richtig, PC und Zentrale im selben Netz?") });
+  }
   // Melder: erst entscheiden, wenn die Zentrale ihre gespeicherten Meldungen geschickt hat.
   if (has.esp()) {
     list.push({ name: "Melder", run: async () => {
@@ -54,6 +63,23 @@ function steps() {
   if (has.diveraApi()) list.push({ name: "Divera", run: async () => { await loadDivera().catch((e) => { divera.ok = false; divera.error = e.message; divera.detail = e.detail; }); return divera.ok !== false; },
     why: () => [divera.error, divera.detail].filter(Boolean).join(" · ") || "Abfrage fehlgeschlagen" });
   return list;
+}
+
+/** Gegenprobe, wenn die App-Verbindung (WebSocket der Oberfläche) stumm bleibt: Port über den nativen
+ *  Netzweg der App ansprechen. Unterscheidet „Netz/Firewall blockiert“ von „nur die App-Verbindung kommt nicht durch“. */
+async function probeZentrale(b) {
+  if (!isTauri) return "";
+  const where = `${b.host}:${b.port}`;
+  try {
+    const { fetch } = await import("@tauri-apps/plugin-http");
+    await fetch(`http://${where}/`, { method: "GET", connectTimeout: 3000, signal: AbortSignal.timeout(4000) });
+  } catch (e) {
+    const m = String(e?.message || e);
+    if (/timed? ?out|timeout|abort|unreachable|no route/i.test(m)) return `Dieses Gerät erreicht ${where} gar nicht · Gleiches WLAN wie die Zentrale (kein Gastnetz)? VPN oder Werbeblocker-App aus? Firewall der Zentrale/NAS: Port ${b.port} für das ganze Heimnetz freigeben.`;
+    if (/refused/i.test(m)) return `${b.host} antwortet, aber Port ${b.port} ist zu · Läuft der Container mosquitto? Port richtig?`;
+  }
+  // Antwort oder Verbindung kam zustande → das Netz ist ok, nur die WebSocket-Verbindung der App scheitert
+  return `Port ${where} ist erreichbar, aber die App-Verbindung kommt nicht durch · Im WLAN des Geräts einen Proxy eingestellt (WLAN-Einstellungen → Proxy „Keine“)? VPN, Private-DNS- oder Werbeblocker-App aus? Dann „Neu verbinden“.`;
 }
 
 let runId = 0;

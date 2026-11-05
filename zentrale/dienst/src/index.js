@@ -71,7 +71,8 @@ client.on("message", (topic, buf, packet) => {
       voice.onConfig();
       hass.sync();
     } else if (parts[0] === "heimalarm" && parts[1] === "clients") {
-      if (msg) ctx.clients[parts[2]] = JSON.parse(msg);
+      // seenAt: wann das Gerät zuletzt verbunden war – für „Jemand zuhause“ (schlafende Handys trennen kurz)
+      if (msg) { const c = JSON.parse(msg); c.seenAt = c.online ? Date.now() : (ctx.clients[parts[2]]?.seenAt || 0); ctx.clients[parts[2]] = c; }
       else delete ctx.clients[parts[2]];   // Gerät in der App entfernt
     } else if (topic === "heimalarm/ping") {
       client.publish("heimalarm/pong", JSON.stringify({ id: msg, version: VERSION, ts: Date.now(), bridge: ctx.bridge, zigbee: ctx.zigbee.length }));

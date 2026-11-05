@@ -257,7 +257,7 @@ export function fillTemplate(tpl, ev = {}) {
   };
   return String(tpl || "")
     .replace(/\{(\w+)\}/gu, (m, k) => (k in vals ? String(vals[k] ?? "").trim() : m))
-    .replace(/\s+([,.:;!?])/gu, "$1").replace(/([,:;–-])\s*(?=[,.:;!?]|$)/gu, "").replace(/\s{2,}/gu, " ").trim().replace(/^[,:;–-]\s*/u, "");
+    .replace(/\s+([,.:;!?])/gu, "$1").replace(/([,.:;!?])[,.:;]+/gu, "$1").replace(/([,:;–-])\s*(?=[,.:;!?]|$)/gu, "").replace(/\s{2,}/gu, " ").trim().replace(/^[,:;–-]\s*/u, "");
 }
 
 /** Alexa spricht einen Text auf einem Echo (Voice Monkey „Speaker“-Gerät). a = { device, speech, voice, chime, show } */

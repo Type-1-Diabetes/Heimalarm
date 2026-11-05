@@ -98,6 +98,7 @@ Heimalarm/
 │     ├─ src/voice.js      Matter-Bridge (Kontaktsensoren für Alexa/Google), Port 5540 (Alexa koppelt nur über 5540)
 │     ├─ src/matterctl.js  Matter-Steuerung: Geräte aus Alexa/Google/SmartThings mitsteuern (Speicher data/matter-ctl, freier Port)
 │     ├─ src/wifi.js       WLAN-Geräte + Voice Monkey (KOPIE von app/src/core/wifi.js)
+│     ├─ src/mdns.js       „name.local“ selbst auflösen (Alpine/Docker kann kein mDNS), localFetch für Routinen
 │     ├─ src/log.js        Protokoll der Zentrale
 │     └─ tools/            devbroker.js (Test-Broker), sim.js (ESP32/Zigbee-Simulator), matter-selftest.mjs (Matter-Test am Pi)
 ├─ esp32/                  ESPHome (Status-LED als Paket in esp32/led/: logik.yaml + Hardware rgb-gpio48/38, einfarbig-esp32/-d1mini): alarm-ich.yaml (ESP32, GPIO27), alarm-ich-s3.yaml (ESP32-S3, GPIO4), alarm-ich-d1mini.yaml (ESP8266, D5/GPIO14), secrets.example.yaml

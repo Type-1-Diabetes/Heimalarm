@@ -12,7 +12,11 @@
 // „Nicht verfügbar“/„Abwesend“ pausiert nur Routinen mit Auslöser „Bei Alarm“ – Zeit-, Geräte- und
 // Bereitschafts-Routinen laufen weiter (sonst könnte z. B. „um 6 Uhr wieder verfügbar“ nie laufen).
 import SunCalc from "suncalc";
+import { localFetch } from "./mdns.js";
 import { wifiApply, wifiHeatGet, isHeat, heatPayload, describeHeat, voiceMonkey, voiceMonkeyAnnounce } from "./wifi.js";
+
+const HOME_GRACE_MS = 30 * 60e3;
+const fetch = localFetch;   // „name.local“ selbst auflösen (Docker/Alpine kann kein mDNS)
 
 export function createRules(ctx, log) {
   const lastAlarm = new Map();   // Sperrzeit je Person
@@ -60,7 +64,11 @@ export function createRules(ctx, log) {
         return cond.is === "light" ? !dark : dark;
       }
       case "home": {
-        const phones = Object.entries(ctx.clients).filter(([, c]) => c.online && c.platform === "Android");
+        // Ein schlafendes Handy trennt die Verbindung zur Zentrale (Android lässt es nicht dauerhaft wach).
+        // Darum gilt es noch HOME_GRACE_MS nach der letzten Verbindung als zuhause – Heimalarm weckt es
+        // für den Abgleich ohnehin spätestens alle ~10 Minuten.
+        const home = (c) => c.online || Date.now() - (c.seenAt || 0) < HOME_GRACE_MS;
+        const phones = Object.entries(ctx.clients).filter(([, c]) => home(c) && c.platform === "Android");
         return cond.who && cond.who !== "any" ? phones.some(([id]) => id === cond.who) : phones.length > 0;
       }
       case "keyword": return String(event?.keyword || "").toLowerCase().includes(String(cond.contains || "").toLowerCase());
@@ -70,6 +78,20 @@ export function createRules(ctx, log) {
         return cond.is === "off" ? m !== "ready" : m === (cond.is || "ready");
       }
       default: return true;
+    }
+  }
+
+  /** Bedingung in Worten – für das Protokoll, wenn eine Routine deswegen nicht lief. */
+  function describeCond(c) {
+    switch (c.type) {
+      case "time": return `Uhrzeit ${c.from}–${c.to}`;
+      case "weekday": return `Wochentage ${(c.days || []).map((d) => "MoDiMiDoFrSaSo".slice(d * 2 - 2, d * 2)).join(" ")}`;
+      case "sun": return c.is === "light" ? "hell" : "dunkel";
+      case "home": return c.who && c.who !== "any" ? `Handy ${ctx.clients[c.who]?.name || c.who} zuhause` : "jemand zuhause";
+      case "keyword": return `Stichwort enthält „${c.contains}“`;
+      case "unit": return `Einheit enthält „${c.contains}“`;
+      case "readiness": return `Bereitschaft ${c.is}`;
+      default: return c.type;
     }
   }
 
@@ -163,7 +185,10 @@ export function createRules(ctx, log) {
     if (!routine.enabled) return;
     if (routine.trigger?.type === "alarm" && readinessMode() !== "ready") return log.info("Nicht verfügbar: Routine übersprungen", routine.name); // B9
     // Per Knopf ausgeführt: Bedingungen gelten nicht
-    if (!event.manual && !allowed(routine, event)) return log.info("Bedingungen nicht erfüllt", routine.name);
+    if (!event.manual && !allowed(routine, event)) {
+      const failed = (routine.conditions?.items || []).filter((c) => !check(c, event)).map(describeCond);
+      return log.info("Bedingungen nicht erfüllt", `${routine.name}${failed.length ? " · " + failed.join(", ") : ""}`);
+    }
     const dry = Boolean(event.test);
     log.action(dry ? `Routine (Test): ${routine.name}` : `Routine: ${routine.name}`, event.who ? `alarm/${event.who}` : routine.trigger?.type);
     if (!dry) takeSnapshot(routine.actions || []);

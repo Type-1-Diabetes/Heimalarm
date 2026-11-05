@@ -26,6 +26,17 @@ const dateText = (ts) => {
   if (d.toDateString() === today.toDateString()) return `Heute ${hm(ts)}`;
   return `${dayShort(ts)} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.`;
 };
+const dayDate = (ts) => { const d = new Date(ts); return `${dayShort(ts)} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.`; };
+/** „Heute 14:02“, „Morgen 06:00“, sonst „Mo 06.11. 18:00“. */
+const whenText = (ts, withTime = true) => {
+  const d = new Date(ts), t = new Date(), tm = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
+  const time = withTime ? ` ${hm(ts)}` : "";
+  if (d.toDateString() === t.toDateString()) return `Heute${time}`;
+  if (d.toDateString() === tm.toDateString()) return `Morgen${time}`;
+  return `${dayDate(ts)}${time}`;
+};
+const NO_DIVERA = "Divera ist nicht eingerichtet.";
+const LOADING = "Wird von Divera geladen …";
 /** FMS 3, 4, 7, 8 = im Einsatz, 6 = außer Dienst, 1 = frei über Funk, sonst auf Wache. */
 const fmsColor = (f) => (["3", "4", "7", "8"].includes(f) ? "signal" : f === "6" ? "warn" : f === "1" ? "info" : "ok");
 const color = (t) => `var(${t.opts?.accent || TILES[t.type]?.color || GROUPS[TILES[t.type]?.group]?.color || "--c-extra"})`;
@@ -37,6 +48,41 @@ const head = (t, title, extra) => t.opts?.header === false ? null
 const empty = (text) => h("p.dash-empty", {}, text);
 const dot = (kind) => h("span.dot", { style: `--d:var(--${kind === "ok" ? "ok" : kind === "warn" ? "warn" : kind === "bad" ? "signal" : "surface-3"})` });
 const btn = (label, onClick, extra = {}) => h("button.dbtn", { type: "button", onclick: onClick, ...extra }, label);
+
+/** Eigene Rückmeldung zu einem Termin (participation): Text und Farbe. */
+const PART = { 0: ["offen", "text-2"], 1: ["zugesagt", "ok"], 2: ["unsicher", "warn"], 3: ["abgesagt", "signal"] };
+
+// ── Karte aus OpenStreetMap-Kacheln (nur Bilder, keine Bibliothek) ─────────────
+const TILE = 256;
+const OSM = "https://tile.openstreetmap.org";
+/** Web-Mercator: Punkt → Pixel bei Zoomstufe z. */
+function project(p, z) {
+  const n = TILE * 2 ** z, r = (p.lat * Math.PI) / 180;
+  return { x: ((p.lng + 180) / 360) * n, y: ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n };
+}
+/** Ausschnitt so wählen, dass alle Punkte mit Rand hineinpassen (höchstens zMax). */
+function osmMap(points, w, hh, zMax, margin) {
+  let z = zMax, ps;
+  for (; z > 3; z--) {
+    ps = points.map((p) => project(p, z));
+    const xs = ps.map((p) => p.x), ys = ps.map((p) => p.y);
+    if (Math.max(...xs) - Math.min(...xs) <= w - 2 * margin && Math.max(...ys) - Math.min(...ys) <= hh - 2 * margin) break;
+  }
+  ps = points.map((p) => ({ ...p, ...project(p, z) }));
+  const xs = ps.map((p) => p.x), ys = ps.map((p) => p.y);
+  const ox = Math.round((Math.min(...xs) + Math.max(...xs)) / 2 - w / 2);
+  const oy = Math.round((Math.min(...ys) + Math.max(...ys)) / 2 - hh / 2);
+  const n = 2 ** z, imgs = [];
+  for (let ty = Math.floor(oy / TILE); ty <= Math.floor((oy + hh) / TILE); ty++) {
+    if (ty < 0 || ty >= n) continue;
+    for (let tx = Math.floor(ox / TILE); tx <= Math.floor((ox + w) / TILE); tx++) {
+      imgs.push(h("img", { src: `${OSM}/${z}/${((tx % n) + n) % n}/${ty}.png`, alt: "", draggable: "false", loading: "eager", style: `left:${tx * TILE - ox}px;top:${ty * TILE - oy}px` }));
+    }
+  }
+  const pins = ps.toSorted((a, b) => (a.kind === "alarm") - (b.kind === "alarm")).map((p) => h(`div.pin.k-${p.kind}${p.x - ox > w - 170 ? ".l" : ""}`, { style: `left:${Math.round(p.x - ox)}px;top:${Math.round(p.y - oy)}px` },
+    h("i"), (w >= 600 || p.kind === "alarm") && h("span", {}, p.kind === "car" && p.fms ? `${p.label} · ${p.fms}` : p.label)));
+  return h("div.map", { role: "img", "aria-label": `Karte: ${points.map((p) => p.label).join(", ")}` }, h("div.map-tiles", {}, imgs), pins);
+}
 
 // ── Einzelne Kacheln ───────────────────────────────────────────────────────
 const R = {
@@ -172,7 +218,8 @@ const R = {
     if (!v?.length) return [head(t), empty("Keine Fahrzeuge in Divera.")];
     return [head(t), h("ul.rows", {}, v.slice(0, lim(t, 59)).map((x) => h("li", {},
       h("span.fms", { style: `--f:var(--${fmsColor(x.fms)}-soft);--fc:var(--${fmsColor(x.fms)})` }, x.fms || "–"),
-      h("b.ell", {}, x.name), x.fmsText && h("span.r", {}, x.fmsText))))];
+      h("b.ell", {}, x.name),
+      (x.fmsText || (x.since > 0 && on(t, "since"))) && h("span.r", {}, [x.fmsText, x.since > 0 && on(t, "since") && h("span.mono", {}, ` ${x.fmsText ? "· " : ""}${hm(x.since)}`)]))))];
   },
 
   events(t, s) {
@@ -181,7 +228,8 @@ const R = {
     if (!ev?.length) return [head(t), empty("Keine anstehenden Termine.")];
     return [head(t), h("ul.rows", {}, ev.slice(0, lim(t, 87)).map((e) => h("li", {},
       h("span.date", {}, h("b", {}, pad(new Date(e.start).getDate())), h("span", {}, dayShort(e.start))),
-      h("div.ev.ell", {}, h("b.ell", {}, e.title), h("span.ell", {}, [e.fullday ? "ganztägig" : hm(e.start), e.place].filter(Boolean).join(" · "))))))];
+      h("div.ev.ell", {}, h("b.ell", {}, e.title), h("span.ell", {}, [e.fullday ? "ganztägig" : hm(e.start), e.place, on(t, "answers") && e.yes != null && `${e.yes} zugesagt`].filter(Boolean).join(" · "))),
+      on(t, "answers") && (e.mine || e.answerable) && h("span.part", { style: `--p:var(--${PART[e.mine][1]})` }, PART[e.mine][0]))))];
   },
 
   news(t, s) {
@@ -189,7 +237,154 @@ const R = {
     if (!s.divera) return [head(t), empty("Divera ist nicht eingerichtet.")];
     if (!n?.length) return [head(t), empty("Keine Mitteilungen.")];
     return [head(t), h("div.news", {}, n.slice(0, Math.min(Math.max(1, Math.floor(t.h * 1.1)), t.opts?.max || Infinity)).map((x) => h("article", {},
-      h("h3.ell", {}, x.title), h("p", {}, x.text.replace(/<[^>]+>/g, " ")), x.ts && h("time", {}, dateText(x.ts)))))];
+      h("h3.ell", {}, x.isNew && h("span.new", { "aria-label": "neu" }), x.title), h("p", {}, x.text.replace(/<[^>]+>/g, " ")),
+      (x.ts || x.survey) && h("time", {}, [x.ts && dateText(x.ts), x.survey && "Umfrage", on(t, "read") && x.recipients ? `${x.read ?? 0}/${x.recipients} gelesen` : ""].filter(Boolean).join(" · ")))))];
+  },
+
+  diveraDetails(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const a = s.divera.board?.alarm;
+    if (!a) return [head(t), empty(s.alarm ? "Zu diesem Alarm hat Divera keine Details." : "Bei einem Divera-Einsatz stehen hier Objekt, Melder, Hinweise, Einsatzmittel und Fahrtziel.")];
+    const rows = [
+      ["Objekt", a.object], ["Melder", a.caller], ["Patient", a.patient], ["Hinweise", a.remark],
+      ["Einsatzmittel", a.units || a.vehicles.join(", ")], ["Fahrtziel", a.destination?.address],
+      ...a.extra.map((x) => ["Zusatz", x]), t.opts?.text === true && ["Meldung", a.text], on(t, "report") && ["Bericht", a.report],
+    ].filter((r) => r && r[1]);
+    const foot = [
+      a.recipients ? `${a.read ?? 0} von ${a.recipients} gelesen` : "",
+      a.responseUntil ? `Rückmeldung bis ${hm(a.responseUntil)}` : "",
+      a.attachments ? `${a.attachments} ${a.attachments === 1 ? "Anhang" : "Anhänge"}` : "",
+      a.myAnswer ? `Du: ${a.myAnswer}` : "",
+    ].filter(Boolean);
+    return [head(t, "", a.preview ? "Beispiel" : a.number ? `Nr. ${a.number}` : ""),
+      (a.priority || a.closed) && h("div.tags", {}, a.priority && h("span.tag.sig", {}, "Sonderrechte"), a.closed && h("span.tag", {}, "beendet")),
+      rows.length ? h("dl.facts", {}, rows.flatMap(([k, v]) => [h("dt", {}, k), h("dd", {}, v)]))
+        : empty("Divera hat zu diesem Einsatz nur Stichwort und Adresse."),
+      foot.length > 0 && t.h >= 2 && on(t, "foot") && h("div.facts-foot", {}, foot.join(" · "))];
+  },
+
+  diveraMap(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const b = s.divera.board;
+    if (!b) return [head(t), empty(LOADING)];
+    const a = b.alarm, pts = [];
+    if (a?.place) pts.push({ ...a.place, kind: "alarm", label: "Einsatz" });
+    if (a?.destination?.place && on(t, "dest")) pts.push({ ...a.destination.place, kind: "dest", label: "Ziel" });
+    if (b.unitInfo?.place && on(t, "home") && (!a || on(t, "homeAlarm"))) pts.push({ ...b.unitInfo.place, kind: "home", label: b.unitInfo.short || "Wache" });
+    if (t.opts?.vehicles === true) for (const v of b.vehicles.filter((x) => x.place)) pts.push({ ...v.place, kind: "car", label: v.name, fms: v.fms });
+    if (!pts.length) return [head(t), empty(a ? "Divera liefert für diesen Einsatz keine Koordinaten." : "In Divera ist kein Standort der Einheit hinterlegt. Bei Einsätzen mit Koordinaten erscheint hier die Karte.")];
+    const W0 = span(t.w, CELL_W), H0 = span(t.h, CELL_H);
+    return [osmMap(pts, W0, H0, { near: 17, far: 13 }[t.opts?.zoom] || 16, Math.round(Math.max(36, Math.min(120, Math.min(W0, H0) * 0.2)))),
+      head(t, a ? "Einsatzort" : "Standort", a?.preview ? "Beispiel" : ""),
+      a?.address && on(t, "address") && h("div.map-addr.ell", {}, a.address),
+      h("div.map-attr", {}, "© OpenStreetMap-Mitwirkende")];
+  },
+
+  diveraAlarms(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const list = (s.divera.board?.alarms || []).filter((a) => on(t, "closed") || !a.closed);
+    if (!s.divera.board) return [head(t), empty(LOADING)];
+    if (!list.length) return [head(t), empty("Keine Einsätze in Divera.")];
+    return [head(t), h("ul.rows", {}, list.slice(0, lim(t, 74)).map((a) => h("li", {},
+      dot(a.closed ? "none" : "bad"),
+      h("div.ev.ell", {}, h("b.ell", {}, a.title || "Einsatz"), h("span.ell", {}, [dateText(a.ts), a.address].filter(Boolean).join(" · "))),
+      t.w >= 3 && h("span.r.mono", {}, a.answers.coming.length ? `${a.answers.coming.length} kommen` : a.closed ? "beendet" : ""))))];
+  },
+
+  myStatus(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const m = s.divera.board?.me;
+    if (!m) return [head(t), empty(s.divera.board ? "Divera meldet keinen eigenen Status." : LOADING)];
+    const sub = [m.since && `seit ${whenText(m.since)}`, m.vehicle].filter(Boolean).join(" · ");
+    const reset = m.resetAt ? `bis ${whenText(m.resetAt)}${m.resetTo ? `, dann ${m.resetTo}` : ""}` : "";
+    const up = t.h >= 2 && on(t, "plan") ? m.upcoming.slice(0, Math.max(0, lim(t, 47) - 2)) : [];
+    return [head(t),
+      h("div.me" + (t.h < 2 ? ".row" : ""), { style: `--m:${m.color || "var(--ok)"}` },
+        h("span.me-dot"), h("div.ell", {}, h("b.ell", {}, m.name), h("div.sub.ell", {}, t.h < 2 && reset ? reset : sub))),
+      reset && t.h >= 2 && h("div.me-reset", {}, icon("clock"), reset),
+      m.note && t.h >= 2 && h("div.sub.ell", {}, `„${m.note}“`),
+      up.length > 0 && h("ul.rows.tight", {}, up.map((u) => h("li", {},
+        h("span.mono", {}, whenText(u.ts)), h("span.ell", {}, [u.title, u.status && `→ ${u.status}`].filter(Boolean).join(" ")))))];
+  },
+
+  people(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const b = s.divera.board;
+    if (!b) return [head(t), empty(LOADING)];
+    const only = t.opts?.status || "";
+    const groups = b.statuses.filter((st) => !only || st.id === only).map((st) => ({ ...st, list: b.people[st.id] || [] })).filter((g) => g.list.length);
+    const total = Object.values(b.people).reduce((n, l) => n + l.length, 0);
+    if (!total) return [head(t), empty("Divera zeigt deinem Schlüssel keine Namen. Die Anzahl je Status steht in „Verfügbarkeit“.")];
+    if (!groups.length) return [head(t, only ? b.statuses.find((x) => x.id === only)?.name : ""), empty("Gerade niemand in diesem Status.")];
+    const qn = Object.fromEntries(b.qualifications.map((q) => [q.id, q.short || q.name]));
+    // Platz: Zeilen à 40 px, Spalten à ≥ 220 px. Je Gruppe eine Kopfzeile, dann die Namen.
+    const cols = Math.max(1, Math.floor((span(t.w, CELL_W) - 44) / 220));
+    let lines = fitRows(t, 40), hidden = 0;
+    const out = [];
+    for (const g of groups) {
+      if (lines < 2) { hidden += g.list.length; continue; }
+      const headLine = only ? 0 : 1;
+      const fit = Math.min(g.list.length, (lines - headLine) * cols);
+      const shown = g.list.length > fit ? fit - 1 : fit;
+      lines -= headLine + Math.ceil(Math.max(1, fit) / cols);
+      hidden += g.list.length - shown;
+      out.push(h("section.pg", { style: `--g:${g.color || "var(--text-2)"}` },
+        !only && h("div.pg-h", {}, h("span.dot", { style: `--d:${g.color || "var(--text-2)"}` }), h("b.ell", {}, g.name), h("span.mono", {}, String(g.list.length))),
+        h("ul.pg-l", { style: `grid-template-columns:repeat(${cols},minmax(0,1fr))` },
+          g.list.slice(0, shown).map((p) => h("li.ell", {}, p.name, on(t, "quals") && p.quals.length > 0 && h("small", {}, p.quals.map((q) => qn[q]).filter(Boolean).slice(0, 3).join(" ")))),
+          g.list.length > shown && h("li.more", {}, `+ ${g.list.length - shown}`))));
+    }
+    return [head(t, only ? b.statuses.find((x) => x.id === only)?.name : "", only ? String(groups[0].list.length) : hidden ? `${total} Personen` : ""), h("div.pgs", {}, out)];
+  },
+
+  quals(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const b = s.divera.board;
+    if (!b) return [head(t), empty(LOADING)];
+    if (!b.qualifications.length) return [head(t), empty("In Divera sind keine Qualifikationen angelegt.")];
+    const st = b.statuses.find((x) => x.id === t.opts?.status) || b.statuses[0];
+    const counts = b.qualByStatus[st?.id] || {};
+    const list = b.qualifications.map((q) => ({ ...q, n: counts[q.id] || 0 })).filter((q) => q.n > 0 || on(t, "zero"));
+    if (!list.length) return [head(t, "", st?.name), empty(`Niemand mit Qualifikation im Status „${st?.name || "?"}“.`)];
+    const cols = Math.max(2, Math.min(6, Math.floor((span(t.w, CELL_W) - 44) / 150)));
+    const rows = Math.max(1, Math.floor((span(t.h, CELL_H) - 62 - 38) / 86));
+    return [head(t, "", st?.name),
+      h("div.qgrid", { style: `grid-template-columns:repeat(${cols},minmax(0,1fr))` }, list.slice(0, cols * rows).map((q) =>
+        h("div" + (q.n ? "" : ".zero"), { title: q.name }, h("b", {}, String(q.n)), h("span.ell", {}, q.short || q.name))))];
+  },
+
+  chat(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const m = s.divera.board?.messages;
+    if (!m) return [head(t), empty(LOADING)];
+    if (!m.length) return [head(t), empty("Keine Nachrichten in Divera.")];
+    return [head(t), h("div.news.chat", {}, m.slice(0, Math.min(Math.max(1, Math.floor(t.h * 1.4)), t.opts?.max || Infinity)).map((x) => h("article", {},
+      h("div.chat-h", {}, h("b.ell", {}, x.author || "Mitglied"), x.channel && on(t, "channel") && t.w >= 3 && h("span.ell", {}, x.channel), x.ts > 0 && h("time", {}, dateText(x.ts))),
+      h("p", {}, x.text))))];
+  },
+
+  shifts(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const b = s.divera.board;
+    if (b?.denied?.shifts) return [head(t), empty("Dienstpläne gibt es für deinen Schlüssel nicht (Recht fehlt oder die Einheit nutzt sie nicht).")];
+    if (!b?.shiftsLoaded) return [head(t), empty(LOADING)];
+    if (!b.shifts.length) return [head(t), empty("Keine aktuellen Dienstpläne.")];
+    return [head(t), h("ul.rows", {}, b.shifts.slice(0, lim(t, 74)).map((x) => h("li", {},
+      h("div.ev.ell", {}, h("b.ell", {}, x.name), h("span.ell", {}, [x.start > 0 && whenText(x.start, false), x.end && `bis ${whenText(x.end, false)}`].filter(Boolean).join(" "))),
+      x.start > 0 && x.start <= Date.now() && (!x.end || x.end >= Date.now()) && h("span.r", {}, "läuft"))))];
+  },
+
+  unit(t, s) {
+    if (!s.divera) return [head(t), empty(NO_DIVERA)];
+    const u = s.divera.board?.unitInfo;
+    if (!u) return [head(t), empty(LOADING)];
+    const nums = [["Mitglieder", u.members], ["Fahrzeuge", u.vehicles], ["Qualifikationen", u.qualifications]].filter(([, n]) => n > 0);
+    if (t.h < 2) return [h("div.unit.row", {}, h("span.ico.unit-ico", {}, icon("building")),
+      h("div.ell", {}, h("b.ell", {}, u.name || "Einheit"), h("div.sub.ell", {}, nums.map(([k, n]) => `${n} ${k}`).join(" · ") || u.address)))];
+    return [head(t, u.name || "Einheit"),
+      u.address && h("div.sub.ell", {}, u.address),
+      h("div.unit-nums", {}, nums.map(([k, n]) => h("div", {}, h("b", {}, String(n)), h("span", {}, k)))),
+      (u.newAlarms > 0 || u.newMessages > 0) && on(t, "new") && h("div.sub", {}, [u.newAlarms > 0 && (u.newAlarms === 1 ? "1 ungelesener Einsatz" : `${u.newAlarms} ungelesene Einsätze`), u.newMessages > 0 && (u.newMessages === 1 ? "1 ungelesene Mitteilung" : `${u.newMessages} ungelesene Mitteilungen`)].filter(Boolean).join(" · "))];
   },
 
   weather(t, s) {

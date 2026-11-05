@@ -144,6 +144,93 @@
 .dash-board .lage .act { margin-top: auto; display: flex; gap: 12px; align-items: center; }
 .dash-board .lage .act .dbtn { min-height: 60px; font-size: 20px; padding: 0 22px; }
 
+/* Einsatzdetails (Divera): Feldname links, Wert rechts */
+.dash-board .tags { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.dash-board .tag { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 8px; background: var(--surface-3); font-size: 16px; font-weight: 650; color: var(--text-2); }
+.dash-board .tag.sig { background: var(--signal-soft); color: var(--signal); }
+.dash-board .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 18px; margin: 0; min-height: 0; overflow: hidden; align-content: start; }
+.dash-board .facts dt { color: var(--text-2); font-size: 17px; padding-top: 3px; }
+.dash-board .facts dd { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.3; min-width: 0; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.dash-board .facts-foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line-2); font: 500 15px var(--mono); color: var(--text-2); flex-shrink: 0; }
+
+/* Karte (OpenStreetMap): füllt die Kachel, Kopfzeile und Adresse liegen darüber */
+.dash-board .t-diveraMap { padding: 0; position: relative; isolation: isolate; }
+.dash-board .t-diveraMap > .th { position: absolute; left: 14px; top: 14px; z-index: 2; padding: 6px 14px 6px 6px; border-radius: 12px; background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--text); max-width: calc(100% - 28px); }
+.dash-board .t-diveraMap > .dash-empty { margin: auto 22px; }
+.dash-board .t-diveraMap:has(> .dash-empty) { padding: 18px 22px 20px; }
+.dash-board .t-diveraMap:has(> .dash-empty) > .th { position: static; padding: 0; background: none; color: var(--text-2); }
+.dash-board .t-diveraMap > .map { zoom: 1; }
+.dash-board .map { position: absolute; inset: 0; overflow: hidden; background: var(--surface-2); }
+.dash-board .map-tiles img { position: absolute; width: 256px; height: 256px; max-width: none; user-select: none; }
+.dash-board[data-theme="dark"] .map-tiles { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.6); }
+.dash-board .pin { position: absolute; width: 0; height: 0; z-index: 1; }
+.dash-board .pin i { position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; background: var(--pc, var(--c-divera));
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--surface) 90%, transparent), 0 4px 12px rgb(0 0 0 / .35); }
+.dash-board .pin span { position: absolute; left: 24px; top: -17px; height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 9px; white-space: nowrap;
+  background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text); font-size: 17px; font-weight: 700; box-shadow: 0 4px 12px rgb(0 0 0 / .25); }
+.dash-board .pin.k-alarm { --pc: var(--signal); z-index: 2; }
+.dash-board .pin.l span { left: auto; right: 24px; }
+.dash-board .pin.k-car.l span { right: 18px; }
+.dash-board .pin.k-alarm i::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 3px solid var(--signal); animation: dash-ping 1.6s cubic-bezier(.2, .7, .3, 1) infinite; }
+@keyframes dash-ping { from { transform: scale(1); opacity: .9; } to { transform: scale(2.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dash-board .pin.k-alarm i::after { animation: none; opacity: 0; } }
+.dash-board .pin.k-dest { --pc: var(--info); }
+.dash-board .pin.k-home { --pc: var(--c-wehr); }
+.dash-board .pin.k-car { --pc: var(--c-haus); }
+.dash-board .pin.k-car i { left: -10px; top: -10px; width: 20px; height: 20px; }
+.dash-board .pin.k-car span { left: 18px; height: 28px; top: -14px; font-size: 15px; }
+.dash-board .map-addr { position: absolute; left: 14px; right: 14px; bottom: 40px; z-index: 2; padding: 10px 16px; border-radius: 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); font-size: 26px; font-weight: 720; font-variation-settings: "wdth" 88; }
+.dash-board .map-attr { position: absolute; right: 0; bottom: 0; z-index: 2; padding: 4px 10px; border-top-left-radius: 8px; background: color-mix(in srgb, var(--surface) 85%, transparent); font-size: 14px; color: var(--text-2); }
+
+/* Mein Status */
+.dash-board .me { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.dash-board .me-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--m); flex-shrink: 0; box-shadow: 0 0 0 6px color-mix(in srgb, var(--m) 22%, transparent); }
+.dash-board .me b { display: block; font-size: 40px; font-weight: 760; font-variation-settings: "wdth" 84; line-height: 1.05; color: var(--m); }
+.dash-board .me .sub { font-size: 17px; margin-top: 4px; }
+.dash-board .me.row { margin: auto 0; }
+.dash-board .t-myStatus:has(.me.row) .th { display: none; }
+.dash-board .t-myStatus:has(.me.row) { justify-content: center; }
+.dash-board .me.row b { font-size: 30px; }
+.dash-board .me-reset { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; }
+.dash-board .me-reset .icon { width: 20px; height: 20px; color: var(--text-2); }
+.dash-board .rows.tight .mono { color: var(--text-2); font-size: 15px; white-space: nowrap; }
+
+/* Wer ist da? Gruppen je Status, Namen in Spalten */
+.dash-board .pgs { display: grid; gap: 14px; align-content: start; min-height: 0; overflow: hidden; }
+.dash-board .pg-h { display: flex; align-items: center; gap: 10px; font-size: 18px; min-width: 0; }
+.dash-board .pg-h b { color: var(--g); font-weight: 700; }
+.dash-board .pg-h .mono { margin-left: auto; font-size: 18px; color: var(--text-2); }
+.dash-board .pg-l { display: grid; gap: 0 16px; margin: 4px 0 0; padding: 0; list-style: none; }
+.dash-board .pg-l li { height: 40px; line-height: 40px; font-size: 20px; font-weight: 600; border-top: 1px solid var(--line-2); }
+.dash-board .pg-l li small { margin-left: 8px; font: 500 14px var(--mono); color: var(--text-2); }
+.dash-board .pg-l li.more { color: var(--text-2); font-weight: 500; }
+
+/* Qualifikationen: Anzahl groß, Kürzel darunter */
+.dash-board .qgrid { display: grid; gap: 10px; align-content: start; min-height: 0; }
+.dash-board .qgrid div { border-radius: 12px; padding: 10px 14px 12px; background: var(--surface-2); min-width: 0; }
+.dash-board .qgrid b { display: block; font-size: 44px; font-weight: 780; font-variation-settings: "wdth" 82; line-height: 1; font-variant-numeric: tabular-nums; color: var(--a); }
+.dash-board .qgrid span { display: block; font-size: 16px; color: var(--text-2); margin-top: 4px; }
+.dash-board .qgrid .zero b { color: var(--text-2); opacity: .55; }
+
+/* Nachrichten, Termine, Mitteilungen: Zusätze */
+.dash-board .chat-h { display: flex; align-items: baseline; gap: 10px; min-width: 0; font-size: 18px; }
+.dash-board .chat-h span { color: var(--text-2); font-size: 15px; }
+.dash-board .chat-h time { margin: 0 0 0 auto; flex-shrink: 0; }
+.dash-board .chat p { color: var(--text); -webkit-line-clamp: 2; }
+.dash-board .part { margin-left: auto; flex-shrink: 0; padding: 4px 10px; border-radius: 8px; font-size: 15px; font-weight: 650; color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
+.dash-board .news h3 .new { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--a); margin-right: 8px; vertical-align: middle; }
+
+/* Einheit */
+.dash-board .unit.row { display: flex; align-items: center; gap: 14px; margin: auto 0; min-width: 0; }
+.dash-board .unit-ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--a) 16%, transparent); color: var(--a); }
+.dash-board .unit-ico .icon { width: 24px; height: 24px; }
+.dash-board .unit.row b { font-size: 24px; display: block; }
+.dash-board .unit.row .sub { font-size: 16px; }
+.dash-board .unit-nums { display: flex; gap: 28px; margin-top: auto; }
+.dash-board .unit-nums b { display: block; font-size: 52px; font-weight: 760; font-variation-settings: "wdth" 82; line-height: 1; font-variant-numeric: tabular-nums; }
+.dash-board .unit-nums span { font-size: 16px; color: var(--text-2); }
+
 /* ── Editor in der App (views/dashboard.js) ── */
 .dash-head { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
 .dash-head h2 { margin: 0; font-size: var(--fs-xl); font-weight: 760; font-variation-settings: "wdth" 88; }

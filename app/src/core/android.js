@@ -1,7 +1,7 @@
 // Android-Funktionen über das eigene Plugin (plugins/heimalarm):
 // Hintergrund-Dienst, Akku-Optimierung (E6), Benachrichtigungen mitlesen (A1/A6).
 import { isTauri, isAndroid } from "./platform.js";
-import { settings, set, phoneMode } from "./settings.js";
+import { settings, set, phoneMode, mode } from "./settings.js";
 import { log } from "./log.js";
 import { alarmFromNotification } from "./engine.js";
 
@@ -105,6 +105,37 @@ export function backgroundIssues(st) {
   if (a.restart !== false && st.overlayAllowed === false) out.push({ id: "neustart", title: "Auto-Neustart braucht eine Erlaubnis", why: "„Über anderen Apps einblenden“, sonst darf Heimalarm sich nicht selbst starten." });
   return out;
 }
+/** Wecker für den Abgleich im Hintergrund stellen: so oft wie eingestellt, aber höchstens alle 5 Minuten
+ *  (Akku; im Doze-Modus legt Android ihn ohnehin auf ~10 Minuten). Abgleich aus = Wecker aus. */
+function scheduleBackgroundSync() {
+  const s = settings().sync || {};
+  const minutes = s.enabled === false ? 0 : Math.max(5, Math.ceil((Number(s.intervalSec) || 120) / 60));
+  call("background_sync", { minutes }).catch(() => {});
+}
+
+let bgRunning = false;
+/** Vom Wecker geweckt: Einsätze, Einstellungen und Protokolle abgleichen, dann wieder schlafen lassen. */
+async function backgroundSync() {
+  if (bgRunning) return;
+  bgRunning = true;
+  try {
+    if (mode() === "direkt") {
+      const { syncPeers } = await import("./direct.js");
+      await syncPeers();
+    } else {
+      // Mit Zentrale: Verbindung baut sich selbst wieder auf; Einsätze erneut melden und kurz Zeit lassen
+      const { emit } = await import("./events.js");
+      emit("sync-dirty", "einsaetze");
+      await new Promise((r) => setTimeout(r, 10_000));
+    }
+  } catch (e) {
+    log("warn", "Abgleich im Hintergrund fehlgeschlagen", String(e?.message || e));
+  } finally {
+    bgRunning = false;
+    call("background_done").catch(() => {});
+  }
+}
+
 export async function setBackgroundService(on) {
   if (!enabled) return;
   await call("set_service", { enabled: on });
@@ -151,6 +182,10 @@ export async function initAndroid() {
   } catch { /* ältere App-Version des Plugins */ }
   configureNative();
   const { on } = await import("./events.js");
+  // Abgleich im Hintergrund: Android weckt die App regelmäßig (BgSync.kt), auch bei ausgeschaltetem Bildschirm
+  try { await core.addPluginListener("heimalarm", "background-sync", () => backgroundSync()); } catch { /* ältere Plugin-Version */ }
+  scheduleBackgroundSync();
+  on("settings", ({ path }) => { if (path.startsWith("sync") || path === "mode") scheduleBackgroundSync(); });
   on("phone-open-app", (a) => openAlarmApp(a));
   on("phone-alert", (a) => phoneAlarm({ title: a.keyword || "Einsatz", text: [a.unit, a.address].filter(Boolean).join(" · ") || "Heimalarm" }));
   // „Ich fahre“ am Handy → Navigation zum Gerätehaus

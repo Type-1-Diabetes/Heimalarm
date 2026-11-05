@@ -83,7 +83,8 @@ Heimalarm/
 │  │  └─ tauri.conf.json   Fenster, Bundle, Android-Einstellungen
 │  └─ plugins/heimalarm/   Eigenes Tauri-Plugin (Rust + Kotlin) für Android:
 │                          AlarmListener (Benachrichtigungen mitlesen), KeepAliveService (Hintergrund), Akku-Optimierung,
-│                          AlarmSound (Wecker-Ton, Vibration, Vollbild-Meldung), Native (Filter + Puffer, BootReceiver)
+│                          AlarmSound (Wecker-Ton, Vibration, Vollbild-Meldung), Native (Filter + Puffer, BootReceiver),
+│                          BgSync (weckt das Handy regelmäßig für den Abgleich im Hintergrund, hält es bei Alarm 90 s wach)
 ├─ zentrale/               Alles für den Raspberry Pi (nur Betriebsart „Mit Zentrale“)
 │  ├─ docker-compose.yml   mosquitto · dienst · zigbee2mqtt (Profil zigbee) · matterbridge (Profil matter)
 │  ├─ mosquitto/           mosquitto.conf (1883 TCP, 9001 WebSocket)

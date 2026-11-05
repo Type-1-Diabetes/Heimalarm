@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-background-done"
+description = "Enables the background_done command without any pre-configured scope."
+commands.allow = ["background_done"]
+
+[[permission]]
+identifier = "deny-background-done"
+description = "Denies the background_done command without any pre-configured scope."
+commands.deny = ["background_done"]

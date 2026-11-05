@@ -180,11 +180,12 @@ export function createRules(ctx, log) {
     log.alarm(data.test ? "Testalarm" : data.probe ? "Generalprobe" : "Alarm", `${data.source || "?"} · alarm/${who}${data.keyword ? " · " + data.keyword : ""}`);
     const event = { ...data, who, test: Boolean(data.test) };
     ctx.onAlarmAccepted?.(event);
-    for (const r of ctx.config.routines || []) {
-      if (r.trigger?.type !== "alarm") continue;
-      if (r.who?.length && !r.who.includes(who)) continue;   // G2 – Routinen pro Person
-      fire(r, event);
-    }
+    const onAlarmRoutines = (ctx.config.routines || []).filter((r) => r.trigger?.type === "alarm" && r.enabled);
+    const mine = onAlarmRoutines.filter((r) => !r.who?.length || r.who.includes(who));   // G2 – Routinen pro Person
+    // Sonst wäre im Protokoll nicht zu sehen, warum nichts passiert ist (z. B. Routine nur für „ich“, Alarm kam als „lukas“)
+    if (onAlarmRoutines.length && !mine.length) log.warn(`Keine Routine für „${who}“`, `Bei-Alarm-Routinen gelten nur für: ${[...new Set(onAlarmRoutines.flatMap((r) => r.who))].join(", ")}`);
+    else if (!onAlarmRoutines.length) log.info("Keine Routine „Bei Alarm“ eingeschaltet");
+    for (const r of mine) fire(r, event);
   }
 
   function onDevice(name, s) {

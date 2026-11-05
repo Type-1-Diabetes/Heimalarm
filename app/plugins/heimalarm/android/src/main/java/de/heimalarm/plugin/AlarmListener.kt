@@ -42,6 +42,8 @@ class AlarmListener : NotificationListenerService() {
         val match = Native.matches(this, sbn.packageName, title, text)
         // Tipp-Ziel merken: „Alarm-App öffnen“ öffnet damit den Einsatz direkt
         if (match) PhoneActions.remember(sbn.packageName, sbn.notification.contentIntent ?: sbn.notification.fullScreenIntent)
+        // Handy wach halten, bis die App den Alarm verarbeitet, an die PCs gesendet und abgeglichen hat
+        if (match) BgSync.holdForAlarm(this)
         val plugin = HeimalarmPlugin.instance?.takeIf { it.alive() }
         if (plugin != null) {
             plugin.emitNotification(sbn.packageName, title, text, sbn.postTime)

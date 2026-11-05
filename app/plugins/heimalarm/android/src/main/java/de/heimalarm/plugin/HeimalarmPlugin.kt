@@ -32,6 +32,11 @@ class ServiceArgs {
 }
 
 @InvokeArg
+class BgSyncArgs {
+    var minutes: Int = 0
+}
+
+@InvokeArg
 class ConfigArgs {
     var packages: Array<String> = arrayOf()
     var words: Array<String> = arrayOf()
@@ -220,6 +225,20 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun openNotificationAccess(invoke: Invoke) {
         activity.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        invoke.resolve(JSObject())
+    }
+
+    /** Abgleich im Hintergrund: Wecker alle `minutes` Minuten (0 = aus), siehe BgSync.kt */
+    @Command
+    fun backgroundSync(invoke: Invoke) {
+        BgSync.setup(activity, invoke.parseArgs(BgSyncArgs::class.java).minutes)
+        invoke.resolve(JSObject())
+    }
+
+    /** Abgleich im Hintergrund fertig – Handy darf wieder schlafen */
+    @Command
+    fun backgroundDone(invoke: Invoke) {
+        BgSync.done()
         invoke.resolve(JSObject())
     }
 
@@ -565,5 +584,9 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
         data.put("text", text)
         data.put("ts", ts)   // Zeitpunkt der Benachrichtigung, nicht der Verarbeitung
         trigger("notification", data)
+    }
+
+    fun emitBackgroundSync() {
+        trigger("background-sync", JSObject())
     }
 }

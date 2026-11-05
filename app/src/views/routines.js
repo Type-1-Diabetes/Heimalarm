@@ -168,7 +168,7 @@ const actionRow = (a, del) => {
     if (a.type === "delay") return h("div.item", {}, h("div.item-head", {}, h("b", {}, "Warten"), h("button.btn.small.ghost.danger", { onclick: del }, "Entfernen")),
       field("Sekunden", h("input.input", { type: "number", min: 1, value: a.sec, onchange: (e) => (a.sec = Number(e.target.value)) })));
     if (a.type === "voicemonkey") return h("div.item", {}, h("div.item-head", {}, h("b", {}, "Alexa-Routine (Voice Monkey)"), h("button.btn.small.ghost.danger", { onclick: del }, "Entfernen")),
-      field("Auslöser-ID", h("input.input", { value: a.device || "", placeholder: "z. B. heimalarm-einsatz", onchange: (e) => (a.device = e.target.value.trim()) }), "In Voice Monkey als „Routine Trigger“ angelegt."));
+      field("Auslöser-ID", h("input.input", { value: a.device || "", placeholder: "z. B. heimalarm-einsatz", onchange: (e) => (a.device = e.target.value.trim()) }), "ID (nicht der Name) des „Routine Trigger“ aus voicemonkey.io → Devices, z. B. heimalarm-einsatz."));
     if (a.type === "announce") return announceRow(a, del);
     if (a.type === "divera") return diveraRow(a, del);
     if (a.type === "readiness") return h("div.item", {}, h("div.item-head", {}, h("b", {}, "Bereitschaft setzen"), h("button.btn.small.ghost.danger", { onclick: del }, "Entfernen")),

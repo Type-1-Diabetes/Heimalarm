@@ -8,14 +8,14 @@ import { state, publish, setDevice } from "./mqtt.js";
 import { fireLocal } from "./routines-local.js";
 import { answerApps } from "./engine.js";
 import { readiness, setReadiness, MODES, untilText } from "./readiness.js";
-import { divera, setDiveraStatus, confirmDiveraAlarm, boardPolling, refreshBoard } from "./divera.js";
+import { divera, setDiveraStatus, confirmDiveraAlarm, boardPolling, refreshBoard, setBoardNeeds } from "./divera.js";
 import { statsEntries, summary, ANSWER_TEXT } from "./stats.js";
 import { getLog } from "./log.js";
 import { has } from "./features.js";
 import { checkup, failedNow } from "./checkup.js";
 import { direct } from "./direct.js";
 import { isTauri } from "./platform.js";
-import { dashboards } from "./dashboard.js";
+import { dashboards, TILES } from "./dashboard.js";
 
 // ── Laufender Einsatz fürs Dashboard ─────────────────────────────────────────
 // Aktiv ab einem Alarm (eigener oder einer Person im Haushalt) bis „Einsatz beenden“ oder Zeitablauf.
@@ -50,6 +50,23 @@ export const SAMPLE_ALARM = {
   keyword: "B3 Wohnungsbrand", unit: "LZ 1", address: "Musterstraße 1, Musterstadt", text: "Beispiel – kein echter Einsatz.",
   sources: ["Beispiel"], test: true, probe: false, who: "", whos: [],
 };
+/** Beispiel-Details für die Divera-Kacheln der Alarm-Ansicht (Vorschau), solange kein echter Divera-Alarm offen ist. */
+function sampleDivera(b) {
+  const home = b?.unitInfo?.place || { lat: 50.1109, lng: 8.6821 };
+  return {
+    id: 0, preview: true, title: SAMPLE_ALARM.keyword, text: "Rauchentwicklung aus Fenster im 2. OG, Person vermutlich noch in der Wohnung.", address: SAMPLE_ALARM.address,
+    ts: Date.now() - 95_000, closed: false, priority: true, number: "", object: "Mehrfamilienhaus, 4 Geschosse", caller: "Nachbarin, Rückruf möglich",
+    patient: "", remark: "Zufahrt über Hinterhof, Hydrant vor Hausnummer 3", units: "HLF 20, DLK 23, RTW", vehicles: [], extra: [], report: "",
+    place: { lat: home.lat + 0.011, lng: home.lng + 0.017 }, destination: null, recipients: 24, read: 17, answerCount: 9,
+    responseUntil: Date.now() + 4 * 60e3, attachments: 0, myAnswer: "", answers: { coming: [], declined: [], open: 0, total: 0 },
+  };
+}
+/** Schnappschuss mit Beispiel-Divera-Alarm, falls Divera eingerichtet ist und gerade keinen eigenen Alarm hat. */
+export function withSampleDivera(snap) {
+  if (!snap.divera || snap.divera.board?.alarm) return snap;
+  const b = snap.divera.board || {};
+  return { ...snap, divera: { ...snap.divera, board: { ...b, alarm: sampleDivera(b) } } };
+}
 let previewUntil = 0;
 /** Alarm-Ansicht für `sec` Sekunden auf allen TV-Fenstern zeigen (Testalarm fürs Dashboard, ohne „Fährst du?“). */
 export function previewAlarm(sec = 60) {
@@ -135,7 +152,7 @@ export function snapshot() {
   const a = board.alarm;
   const logbuch = has.logbuch();
   const ppl = persons();
-  return {
+  const snap = {
     theme: s.ui.theme === "light" ? "light" : "dark",
     me: s.alarm.me,
     alarm: a ? {
@@ -162,6 +179,7 @@ export function snapshot() {
     weather: { ...weather },
     at: Date.now(),
   };
+  return a?.preview ? withSampleDivera(snap) : snap;
 }
 
 /** Aktion aus einer Kachel (Editor-Vorschau oder TV-Fenster). */
@@ -198,7 +216,8 @@ function needs(type) { return dashboards().some((d) => Object.values(d.views).so
 /** Editor oder TV-Fenster melden sich an/ab. Startet Divera- und Wetterabfrage nach Bedarf. */
 export function boardUse(delta) {
   users = Math.max(0, users + delta);
-  const diveraTiles = ["diveraStatus", "answers", "availability", "vehicles", "events", "news"].some(needs);
+  const diveraTiles = Object.keys(TILES).filter((k) => TILES[k].group === "divera").some(needs);
+  setBoardNeeds({ vehicles: needs("vehicles") || needs("diveraMap"), shifts: needs("shifts") });
   boardPolling(users && has.diveraApi() && diveraTiles ? 60 : 0);
   clearInterval(wxTimer); wxTimer = null;
   if (users && needs("weather")) { refreshWeather(); wxTimer = setInterval(refreshWeather, 15 * 60e3); }

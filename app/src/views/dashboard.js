@@ -9,7 +9,8 @@ import {
   COLS, ROWS, VIEWS, TILES, GROUPS, TEMPLATES, dashboards, getDash, addDash, applyTemplate, removeDash, updateDash,
   addTile, placeTile, planPlace, removeTile, setTileOpts, fits,
 } from "../core/dashboard.js";
-import { snapshot, boardUse, previewAlarm, SAMPLE_ALARM } from "../core/board.js";
+import { snapshot, boardUse, previewAlarm, SAMPLE_ALARM, withSampleDivera } from "../core/board.js";
+import { settings } from "../core/settings.js";
 import { screens } from "../core/tvlink.js";
 import { has } from "../core/features.js";
 import { hasPcFeatures } from "../core/platform.js";
@@ -55,7 +56,7 @@ const boxStyle = ({ x, y, w, h: hh }) => `grid-area:${y + 1}/${x + 1}/${y + hh +
 function stageView(dash, rerender) {
   const tiles = dash.views[ui.view];
   let snap = snapshot();
-  if (ui.view === "alarm" && !snap.alarm) snap = { ...snap, alarm: { ...SAMPLE_ALARM, ts: Date.now() - 95_000, preview: true } };
+  if (ui.view === "alarm" && !snap.alarm) snap = withSampleDivera({ ...snap, alarm: { ...SAMPLE_ALARM, ts: Date.now() - 95_000, preview: true } });
   const board = renderBoard(dash, ui.view, snap, { act: () => {} });
   board.inert = true;
 
@@ -233,7 +234,9 @@ function pickImage(onDone) {
 /** Kachelfarben. Signalrot bleibt dem Alarm vorbehalten. */
 const ACCENTS = [["", "Automatisch"], ["--c-haus", "Türkis"], ["--c-divera", "Blau"], ["--c-wehr", "Orange"], ["--c-voice", "Grün"], ["--c-phone", "Violett"], ["--c-safe", "Pink"], ["--c-extra", "Grau"]];
 /** Kacheln mit Liste: Anzahl der Einträge begrenzbar (0 = so viele, wie passen). */
-const LISTS = new Set(["household", "system", "devices", "routines", "log", "einsaetze", "vehicles", "events", "news", "answers"]);
+const LISTS = new Set(["household", "system", "devices", "routines", "log", "einsaetze", "vehicles", "events", "news", "answers", "diveraAlarms", "chat", "shifts"]);
+/** Kacheln, die einen Divera-Status zur Auswahl haben: [Bezeichnung, erster Eintrag]. */
+const STATUS_PICK = { people: ["Status", "Alle Status"], quals: ["Im Status", ""] };
 /** Schalter je Kacheltyp: [Schlüssel, Bezeichnung, Hinweis]. Standard ist an. */
 const SWITCHES = {
   clock: [["seconds", "Sekunden"], ["date", "Datum"]],
@@ -241,6 +244,31 @@ const SWITCHES = {
   stats: [["chart", "Monatsdiagramm", "ab 2 Feldern Höhe"]],
   availability: [["legend", "Zahlen je Status", "ab 2 Feldern Höhe"]],
   alarm: [["text", "Einsatztext", "ab 3 Feldern Höhe"], ["buttons", "Knöpfe", "Ich komme · Einsatz beenden"]],
+  vehicles: [["since", "Uhrzeit der Statusänderung"]],
+  events: [["answers", "Rückmeldungen", "deine Antwort und Zusagen"]],
+  news: [["read", "Gelesen", "wie viele die Mitteilung gelesen haben"]],
+  diveraDetails: [["text", "Meldungstext", "steht meist schon in „Aktueller Alarm“", false], ["report", "Einsatzbericht"], ["foot", "Fußzeile", "gelesen, Rückmeldefrist, Anhänge"]],
+  diveraMap: [["address", "Adresse einblenden"], ["dest", "Fahrtziel", "falls Divera eins hat"], ["home", "Standort der Einheit"], ["homeAlarm", "Standort auch bei Einsatz", "zeigt den Weg von der Wache"], ["vehicles", "Fahrzeuge mit Position", "nur wenn Divera sie kennt", false]],
+  diveraAlarms: [["closed", "Beendete Einsätze"]],
+  myStatus: [["plan", "Anstehende Änderungen", "aus dem Statusplan, ab 2 Feldern Höhe"]],
+  people: [["quals", "Qualifikationen", "Kürzel hinter dem Namen"]],
+  quals: [["zero", "Auch mit 0 zeigen"]],
+  chat: [["channel", "Kanal", "Name des Chat-Kanals"]],
+  unit: [["new", "Ungelesenes", "Einsätze und Mitteilungen, ab 2 Feldern Höhe"]],
+};
+
+/** Was eine Divera-Kachel zeigt und woher es kommt (ehrlich über Grenzen). */
+const DIVERA_HINT = {
+  diveraDetails: "Alles, was die Leitstelle oder der Alarmgeber in Divera einträgt. Leere Felder werden weggelassen.",
+  diveraMap: "Kartenbilder von OpenStreetMap. Sie werden nur geladen, solange diese Kachel in einem Dashboard liegt.",
+  diveraAlarms: "Einsätze, die dein Divera-Schlüssel sehen darf, mit Anzahl der Zusagen.",
+  myStatus: "Dein Status in Divera mit Zeitpunkt, Rücksetzen und Einträgen aus dem Statusplan.",
+  people: "Namen je Status. Divera blendet Personen aus, die ihren Namen im Monitor verbergen. Ohne Leserecht bleibt die Kachel leer.",
+  quals: "Anzahl je Qualifikation, z. B. Atemschutz oder Maschinist, im gewählten Status.",
+  chat: "Neueste Nachrichten aus den Divera-Chats, die du sehen darfst.",
+  shifts: "Dienstpläne aus Divera. Nicht jede Einheit nutzt sie.",
+  unit: "Name, Adresse und Stärke deiner Einheit.",
+  vehicles: "Fahrzeuge mit FMS-Status. Die Uhrzeit kommt aus dem Fahrzeugstatus von Divera.",
 };
 
 function lookPane(t, def, opt) {
@@ -269,7 +297,11 @@ function contentPane(t, opt) {
     t.type === "image" && h("div.row", {},
       h("button.btn.small", { type: "button", onclick: () => pickImage((src) => opt({ src })) }, o.src ? "Anderes Bild" : "Bild wählen"),
       o.src && h("button.btn.small.ghost", { type: "button", onclick: () => opt({ src: "" }) }, "Entfernen")),
-    ...sw.map(([k, label, hint]) => switchRow(label, hint, o[k] !== false, (v) => opt({ [k]: v }))),
+    ...sw.map(([k, label, hint, def = true]) => switchRow(label, hint, def ? o[k] !== false : o[k] === true, (v) => opt({ [k]: v }))),
+    STATUS_PICK[t.type] && field(STATUS_PICK[t.type][0],
+      select([...(STATUS_PICK[t.type][1] ? [["", STATUS_PICK[t.type][1]]] : []), ...(settings().divera.statuses || []).map((x) => [x.id, x.name])], o.status || "", (v) => opt({ status: v })),
+      t.type === "quals" ? "Zählt, wer in diesem Status ist. Ohne Auswahl der erste Status der Liste." : ""),
+    t.type === "diveraMap" && h("div.field", {}, h("span", {}, "Ausschnitt"), segmented([["near", "Nah"], ["", "Normal"], ["far", "Weit"]], o.zoom || "", (v) => opt({ zoom: v }))),
     LISTS.has(t.type) && h("div.field", {}, h("span", {}, "Einträge"),
       h("div.stepper", { role: "group", "aria-label": "Einträge" },
         h("button", { type: "button", "aria-label": "Weniger Einträge", onclick: () => opt({ max: Math.max(0, (o.max || 11) - 1) }) }, "−"),
@@ -307,6 +339,7 @@ function inspector(dash, rerender) {
     t.type === "weather" && h("p.hint", {}, "Daten vom Deutschen Wetterdienst über Bright Sky. Ort: Einstellungen → Zentrale → Standort."),
     t.type === "answers" && h("p.hint", {}, "Wer kommt, wer nicht, wer offen ist – aus Divera. Sichtbar ist nur, was dein Divera-Schlüssel sehen darf."),
     t.type === "alarm" && h("p.hint", {}, "Mit aPager allein kommen nur Stichwort und Einheit an, mit Divera oder SYBOS auch Adresse und Text."),
+    DIVERA_HINT[t.type] && h("p.hint", {}, DIVERA_HINT[t.type]),
     h("div.row", {},
       h("button.btn.small", { type: "button", onclick: () => {
         const id = addTile(dash.id, other, t.type);

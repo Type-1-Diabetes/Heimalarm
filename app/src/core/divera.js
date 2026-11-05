@@ -5,6 +5,8 @@
 //                                             pull/all liefert dieselben Alarme unter data.alarm.
 //   POST /api/v2/statusgeber/set-status       eigenen Status setzen { Status: { id, note, reset_date, reset_to } }
 //   POST /api/v2/alarms/confirm/{id}          Rückmeldung zu einem Einsatz { Status: { id, note } }
+//   GET  /api/v2/pull/vehicle-status          Fahrzeuge mit FMS-Status, Zeitpunkt, Notiz, Position (nur fürs Dashboard)
+//   GET  /api/v2/shift-plans                  Dienstpläne (nur fürs Dashboard, nicht jede Einheit hat sie)
 // In der App läuft der Abruf über das Tauri-HTTP-Plugin (kein CORS-Problem).
 import { pickDetails } from "./stats.js";
 import { settings, set } from "./settings.js";
@@ -192,18 +194,37 @@ export function restartDivera() {
 // ── Dashboard: Einheit, Fahrzeuge, Termine, Mitteilungen, Rückmeldungen ──
 let boardTimer = null;
 let boardAlarms = true;   // /alarms für Rückmeldungen versuchen; fällt weg, wenn der Schlüssel es nicht darf
+/** Zusätzliche Endpunkte nur, wenn eine Kachel sie braucht (setBoardNeeds). false = Schlüssel darf es nicht. */
+const extras = { vehicles: { want: false, ok: true }, shifts: { want: false, ok: true } };
+const EXTRA_PATH = { vehicles: "/api/v2/pull/vehicle-status", shifts: "/api/v2/shift-plans" };
 
-/** Einmal alles fürs Dashboard laden (pull/all, dazu /alarms für die Rückmeldungen). */
+/** Welche weiteren Divera-Daten die Dashboards brauchen: { vehicles: bool, shifts: bool }. */
+export function setBoardNeeds(n) { for (const k of Object.keys(extras)) extras[k].want = Boolean(n?.[k]); }
+
+async function loadExtras() {
+  const out = {};
+  await Promise.all(Object.entries(extras).map(async ([k, e]) => {
+    if (!e.want || !e.ok) return;
+    try { const r = await api(EXTRA_PATH[k]); out[k] = Array.isArray(r) ? r : Object.values(r?.items || r || {}); }
+    catch (err) {
+      if (/Berechtigung|Nicht gefunden/u.test(err.message)) { e.ok = false; log("info", `Divera: ${k === "shifts" ? "Dienstpläne" : "Fahrzeugstatus"} darf dieser Schlüssel nicht abrufen`); }
+    }
+  }));
+  return out;
+}
+
+/** Einmal alles fürs Dashboard laden (pull/all, dazu /alarms für die Rückmeldungen und Extras nach Bedarf). */
 export async function refreshBoard() {
   if (!settings().divera.key) { divera.board = null; return; }
   try {
-    const pull = await api("/api/v2/pull/all");
+    const [pull, more] = await Promise.all([api("/api/v2/pull/all"), loadExtras()]);
     let alarms = null;
     if (boardAlarms) {
       try { alarms = await api("/api/v2/alarms"); }
       catch { boardAlarms = false; }
     }
-    divera.board = parseBoard(pull, alarms);
+    divera.board = parseBoard(pull, alarms, more);
+    divera.board.denied = { vehicles: !extras.vehicles.ok, shifts: !extras.shifts.ok };
     if (divera.board.myStatus) divera.current = divera.board.myStatus;
     divera.ok = true; divera.error = "";
   } catch (e) {

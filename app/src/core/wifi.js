@@ -206,11 +206,46 @@ export async function hueTargets(host, user, fetchFn) {
   ];
 }
 
-/** Alexa-Routine über Voice Monkey starten (Cloud). */
+// ── Voice Monkey (API v3, https://voicemonkey.io/docs/api) ─────────────────
+// Ein einzelner Aufruf darf bei einem echten Alarm nicht einfach verloren gehen:
+// kurze Netzaussetzer (Handy wacht gerade auf, WLAN↔Mobil), 5xx (ALEXA_TRIGGER_FAILED) und
+// kurze Drosselung (THROTTLED) werden mit Pause wiederholt – so empfiehlt es die Doku.
+// Falscher Token, falsche ID oder Monatslimit werden nicht wiederholt (bringt nichts).
+const VM_TRIES = 4, VM_WAIT = [1000, 3000, 8000], VM_TIMEOUT = 10e3;
+const VM_ERRORS = { INVALID_TOKEN: "Token ungültig", UNAUTHORIZED: "Token ungültig", THROTTLED: "Zu viele Aufrufe", MONTHLY_QUOTA_EXCEEDED: "Monatslimit erreicht", ALEXA_TRIGGER_FAILED: "Alexa hat nicht reagiert" };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function vmCall(path, params, fetchFn, notFound) {
+  const url = `https://api-v3.voicemonkey.io/${path}?${new URLSearchParams(params)}`;
+  let last;
+  for (let i = 0; i < VM_TRIES; i++) {
+    let retry = true, wait = VM_WAIT[i] ?? VM_WAIT.at(-1);
+    try {
+      const signal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(VM_TIMEOUT) : undefined;
+      const r = await fetchFn(url, signal ? { signal } : undefined);
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.success !== false) return j;
+      // Fehlercode kommt als „CODE“ oder „CODE:<Zeit>“ (THROTTLED:<bis wann>)
+      const raw = String(j.error || j.code || ""), code = raw.split(":")[0];
+      const msg = code === "DEVICE_NOT_FOUND" || r.status === 404 ? notFound
+        : VM_ERRORS[code] || (r.status === 401 ? "Token ungültig" : `Fehler ${r.status}${j.message ? ": " + j.message : ""}`);
+      last = new Error(msg);
+      const until = Date.parse(j.lockoutUntil || raw.slice(code.length + 1));
+      if (code === "THROTTLED" && until > Date.now()) wait = Math.max(wait, until - Date.now() + 250);
+      retry = (r.status >= 500 || code === "THROTTLED" || code === "ALEXA_TRIGGER_FAILED") && wait <= 30e3;
+    } catch (e) {
+      last = new Error(e?.name === "TimeoutError" || e?.name === "AbortError" ? "keine Antwort (Internet?)" : `nicht erreichbar: ${e?.message || e}`);
+    }
+    if (!retry || i === VM_TRIES - 1) break;
+    await sleep(wait);
+  }
+  throw last;
+}
+
+/** Alexa-Routine über Voice Monkey starten (Cloud). device = ID des „Routine Trigger“ (nicht der Anzeigename). */
 export async function voiceMonkey(token, device, fetchFn) {
-  const r = await fetchFn(`https://api-v3.voicemonkey.io/trigger?token=${encodeURIComponent(token)}&device=${encodeURIComponent(device)}`);
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.success === false) throw new Error({ INVALID_TOKEN: "Token ungültig", DEVICE_NOT_FOUND: "Auslöser nicht gefunden", THROTTLED: "Zu viele Aufrufe", MONTHLY_QUOTA_EXCEEDED: "Monatslimit erreicht" }[j.error] || `Voice Monkey: Fehler ${r.status}`);
+  if (!device) throw new Error("Auslöser-ID fehlt");
+  await vmCall("trigger", { token, device }, fetchFn, `Auslöser „${device}“ nicht gefunden – ID aus Voice Monkey → Devices eintragen, nicht den Namen`);
 }
 
 /** Platzhalter in Texten füllen: {stichwort} {einheit} {adresse} {text} {quelle} {person} {uhrzeit}. Leere fallen weg. */
@@ -222,7 +257,7 @@ export function fillTemplate(tpl, ev = {}) {
   };
   return String(tpl || "")
     .replace(/\{(\w+)\}/gu, (m, k) => (k in vals ? String(vals[k] ?? "").trim() : m))
-    .replace(/\s+([,.:;!?])/gu, "$1").replace(/([,:;–-])\s*(?=[,.:;!?]|$)/gu, "").replace(/\s{2,}/gu, " ").trim().replace(/^[,:;–-]\s*/u, "");
+    .replace(/\s+([,.:;!?])/gu, "$1").replace(/([,.:;!?])[,.:;]+/gu, "$1").replace(/([,:;–-])\s*(?=[,.:;!?]|$)/gu, "").replace(/\s{2,}/gu, " ").trim().replace(/^[,:;–-]\s*/u, "");
 }
 
 /** Alexa spricht einen Text auf einem Echo (Voice Monkey „Speaker“-Gerät). a = { device, speech, voice, chime, show } */
@@ -232,8 +267,6 @@ export async function voiceMonkeyAnnounce(token, a, ev, fetchFn) {
   if (a.voice) q.set("voice", a.voice);
   if (a.chime) q.set("chime", a.chime);
   if (a.show) { q.set("text_display", speech); q.set("text_display_bg_colour", "#C42D21"); q.set("text_display_size", "40"); }
-  const r = await fetchFn(`https://api-v3.voicemonkey.io/announce?${q}`);
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.success === false) throw new Error({ INVALID_TOKEN: "Token ungültig", DEVICE_NOT_FOUND: "Lautsprecher nicht gefunden", THROTTLED: "Zu viele Aufrufe", MONTHLY_QUOTA_EXCEEDED: "Monatslimit erreicht" }[j.error] || `Voice Monkey: Fehler ${r.status}`);
+  await vmCall("announce", Object.fromEntries(q), fetchFn, `Lautsprecher „${a.device || ""}“ nicht gefunden – ID aus Voice Monkey → Devices → Speakers eintragen`);
   return speech;
 }

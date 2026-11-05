@@ -137,6 +137,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val a = intent.action ?: return
         if (a != Intent.ACTION_BOOT_COMPLETED && a != Intent.ACTION_MY_PACKAGE_REPLACED && a != "android.intent.action.QUICKBOOT_POWERON") return
+        BgSync.schedule(context)   // Wecker für den Hintergrund-Abgleich überlebt keinen Neustart
         if (!Native.serviceWanted(context)) return
         try { Native.startService(context) } catch (_: Exception) { /* Android verbietet es manchmal – App öffnet sich dann beim Alarm */ }
         if (Native.restartWanted(context)) Native.launchSelf(context)

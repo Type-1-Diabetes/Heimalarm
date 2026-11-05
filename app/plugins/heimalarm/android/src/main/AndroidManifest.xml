@@ -57,6 +57,9 @@
                 android:value="Empfang von Einsatz-Alarmen im Heimnetz" />
         </service>
 
+        <!-- Wecker für den Abgleich im Hintergrund (BgSync.kt) -->
+        <receiver android:name=".BgSyncReceiver" android:exported="false" />
+
         <!-- Knopf „Stopp“ in der Alarm-Mitteilung -->
         <receiver android:name=".StopReceiver" android:exported="false" />
 

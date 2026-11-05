@@ -11,8 +11,10 @@ import { startVoice } from "./voice.js";
 import { startHass } from "./hass.js";
 import { startDivera } from "./divera.js";
 import { startMatterCtl } from "./matterctl.js";
+import { readFileSync } from "node:fs";
 
-export const VERSION = "0.2.10";
+// Version immer aus package.json – dieselbe Quelle, gegen die die App vergleicht
+export const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const URL = process.env.MQTT_URL || "mqtt://mosquitto:1883";
 
 const client = mqtt.connect(URL, {

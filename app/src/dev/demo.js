@@ -23,6 +23,7 @@ export function fillDemo(state) {
   state.zigbee = [
     { friendly_name: "Flur Decke", type: "Router", definition: { description: "LED-Lampe E27" } },
     { friendly_name: "Küche Stecker", type: "Router", definition: { description: "Zwischenstecker" } },
+    { friendly_name: "Taster Flur", type: "EndDevice", definition: { description: "Funk-Taster", exposes: [{ type: "enum", property: "action", label: "Action", access: 1, values: ["single", "double", "hold"] }, { type: "numeric", property: "battery", access: 1 }] } },
     { friendly_name: "Heizung Wohnzimmer", type: "EndDevice", definition: { description: "Sonoff TRVZB Heizkörperthermostat", exposes: [{ type: "climate", features: [{ property: "occupied_heating_setpoint" }, { property: "local_temperature" }, { property: "system_mode" }] }, { property: "battery" }] } },
   ];
   state.zstate = { ...state.zstate, "Heizung Wohnzimmer": { occupied_heating_setpoint: 20.5, local_temperature: 19.8, system_mode: "heat", battery: 86 } };

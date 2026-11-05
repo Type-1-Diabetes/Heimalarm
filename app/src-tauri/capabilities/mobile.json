@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "mobile",
-  "description": "Nur Handy: App-Sperre per Fingerabdruck",
+  "description": "Nur Handy: App-Sperre per Fingerabdruck, Verbindung zur Zentrale über den nativen WebSocket",
   "platforms": ["android", "iOS"],
   "windows": ["main"],
-  "permissions": ["biometric:default"]
+  "permissions": ["biometric:default", "websocket:default"]
 }

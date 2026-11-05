@@ -23,6 +23,14 @@ Alle Heimalarm-Android-Befehle erlauben
 - `allow-alarm-volume`
 - `allow-set-alarm-volume`
 - `allow-open-full-screen-settings`
+- `allow-request-local-network`
+- `allow-open-alarm-app`
+- `allow-navigate`
+- `allow-stop-torch`
+- `allow-test-torch`
+- `allow-open-overlay-settings`
+- `allow-open-dnd-settings`
+- `allow-open-app-details`
 
 ## Permission Table
 
@@ -166,6 +174,84 @@ Denies the list_sounds command without any pre-configured scope.
 <tr>
 <td>
 
+`heimalarm:allow-navigate`
+
+</td>
+<td>
+
+Enables the navigate command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-navigate`
+
+</td>
+<td>
+
+Denies the navigate command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-open-alarm-app`
+
+</td>
+<td>
+
+Enables the open_alarm_app command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-open-alarm-app`
+
+</td>
+<td>
+
+Denies the open_alarm_app command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-open-app-details`
+
+</td>
+<td>
+
+Enables the open_app_details command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-open-app-details`
+
+</td>
+<td>
+
+Denies the open_app_details command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `heimalarm:allow-open-battery-settings`
 
 </td>
@@ -185,6 +271,32 @@ Enables the open_battery_settings command without any pre-configured scope.
 <td>
 
 Denies the open_battery_settings command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-open-dnd-settings`
+
+</td>
+<td>
+
+Enables the open_dnd_settings command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-open-dnd-settings`
+
+</td>
+<td>
+
+Denies the open_dnd_settings command without any pre-configured scope.
 
 </td>
 </tr>
@@ -237,6 +349,32 @@ Enables the open_notification_access command without any pre-configured scope.
 <td>
 
 Denies the open_notification_access command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-open-overlay-settings`
+
+</td>
+<td>
+
+Enables the open_overlay_settings command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-open-overlay-settings`
+
+</td>
+<td>
+
+Denies the open_overlay_settings command without any pre-configured scope.
 
 </td>
 </tr>
@@ -367,6 +505,32 @@ Enables the remove_listener command without any pre-configured scope.
 <td>
 
 Denies the remove_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-request-local-network`
+
+</td>
+<td>
+
+Enables the request_local_network command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-request-local-network`
+
+</td>
+<td>
+
+Denies the request_local_network command without any pre-configured scope.
 
 </td>
 </tr>
@@ -523,6 +687,58 @@ Enables the stop_sound command without any pre-configured scope.
 <td>
 
 Denies the stop_sound command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-stop-torch`
+
+</td>
+<td>
+
+Enables the stop_torch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-stop-torch`
+
+</td>
+<td>
+
+Denies the stop_torch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-test-torch`
+
+</td>
+<td>
+
+Enables the test_torch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-test-torch`
+
+</td>
+<td>
+
+Denies the test_torch command without any pre-configured scope.
 
 </td>
 </tr>

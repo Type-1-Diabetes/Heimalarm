@@ -1,6 +1,6 @@
 [package]
 name = "heimalarm"
-version = "0.1.35"
+version = "0.1.38"
 description = "Heimalarm"
 edition = "2021"
 
@@ -19,6 +19,8 @@ tauri-plugin-notification = "2"
 tauri-plugin-http = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-heimalarm = { path = "../plugins/heimalarm" }
+# Android: Verbindung zur Zentrale (ws://) nativ statt über die WebView – ohne TLS (Heimnetz)
+tauri-plugin-websocket = { version = "2", default-features = false }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"

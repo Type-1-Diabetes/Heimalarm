@@ -15,9 +15,9 @@ import { readFileSync } from "node:fs";
 
 // Version immer aus package.json – dieselbe Quelle, gegen die die App vergleicht
 export const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
-const URL = process.env.MQTT_URL || "mqtt://mosquitto:1883";
+const MQTT_URL = process.env.MQTT_URL || "mqtt://mosquitto:1883";
 
-const client = mqtt.connect(URL, {
+const client = mqtt.connect(MQTT_URL, {
   username: process.env.MQTT_USER || undefined,
   password: process.env.MQTT_PASS || undefined,
   clientId: "heimalarm-dienst",

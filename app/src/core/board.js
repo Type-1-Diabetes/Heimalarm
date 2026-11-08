@@ -8,7 +8,7 @@ import { state, publish, setDevice } from "./mqtt.js";
 import { fireLocal } from "./routines-local.js";
 import { answerApps } from "./engine.js";
 import { readiness, setReadiness, MODES, untilText } from "./readiness.js";
-import { divera, setDiveraStatus, confirmDiveraAlarm, boardPolling, refreshBoard, setBoardNeeds } from "./divera.js";
+import { divera, setDiveraStatus, confirmDiveraAlarm, boardPolling, refreshBoard, setBoardNeeds, markDiveraRead, answerDiveraSurvey, answerDiveraEvent, loadDiveraReach } from "./divera.js";
 import { statsEntries, summary, ANSWER_TEXT } from "./stats.js";
 import { getLog } from "./log.js";
 import { has } from "./features.js";
@@ -168,7 +168,7 @@ export function snapshot() {
     system: system(),
     divera: has.diveraApi() ? {
       ok: divera.ok, error: divera.error, current: divera.current,
-      statuses: s.divera.statuses || [], answers: s.divera.answers || [], board: divera.board,
+      statuses: s.divera.statuses || [], answers: s.divera.answers || [], board: divera.board, reach: { ...divera.reach },
     } : null,
     logbuch,
     einsaetze: logbuch ? statsEntries().filter((e) => !e.deleted).slice(-8).toReversed().map((e) => ({ keyword: e.keyword || "Einsatz", ts: e.ts, answer: e.answer ? ANSWER_TEXT[e.answer] || e.answer : "" })) : [],
@@ -199,6 +199,11 @@ export async function act(a) {
       refreshBoard();
       break;
     }
+    // Lesefenster (ui/detail.js)
+    case "divera-read": if (await markDiveraRead(a.kind, a.id)) refreshBoard(); break;
+    case "divera-survey": if (await answerDiveraSurvey(a.id, a.survey, a.answer, a.checked !== false, a.note || "")) await refreshBoard(); break;
+    case "divera-event": if (await answerDiveraEvent(a.id, a.participation, a.note || "")) await refreshBoard(); break;
+    case "divera-reach": await loadDiveraReach(a.kind, a.id); break;
     case "device": setDevice(a.name, { state: a.on ? "ON" : "OFF", transition: 1 }); break;
     case "routine": {
       const r = (shared().routines || []).find((x) => x.id === a.id);

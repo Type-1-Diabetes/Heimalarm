@@ -1,7 +1,8 @@
 // TV-Dashboards: frei zusammengestellte Kacheln im Raster 12 × 6, je Dashboard zwei Ansichten
-// (Ruhe und Alarm, wie bei Feuerwehr-Alarmmonitoren). Liegt nur auf diesem PC (settings.dashboards).
+// (Ruhe und Alarm, wie bei Feuerwehr-Alarmmonitoren). Gebaut am PC (settings.dashboards), abgeglichen mit Handy und
+// weiteren PCs (core/shared.js mit Zentrale, core/sync.js ohne). Monitor und „auf dem Bildschirm zeigen“ bleiben je PC.
 // Anzeige: tv.html in einem randlosen Fenster (src/tv.js), Inhalt kommt vom Hauptfenster (core/tvlink.js).
-import { settings, set } from "./settings.js";
+import { settings, set, replace } from "./settings.js";
 
 export const COLS = 12;
 export const ROWS = 6;
@@ -124,7 +125,36 @@ export function addDash(name, tpl = "schreibtisch") {
 }
 /** Beide Ansichten eines Dashboards durch eine Vorlage ersetzen. */
 export const applyTemplate = (id, tpl) => mutate((list) => { const d = list.find((x) => x.id === id); if (d) d.views = fromTemplate(tpl); });
-export const removeDash = (id) => mutate((list) => { const i = list.findIndex((d) => d.id === id); if (i >= 0) list.splice(i, 1); });
+export const removeDash = (id) => {
+  set("dashboardsGone", [...(settings().dashboardsGone || []).filter((x) => x !== id), id].slice(-50));
+  mutate((list) => { const i = list.findIndex((d) => d.id === id); if (i >= 0) list.splice(i, 1); });
+};
+
+// ── Abgleich mit anderen Geräten ────────────────────────────────────────────
+/** Was andere Geräte bekommen: alle Dashboards und die IDs gelöschter. */
+export const dashSyncPayload = () => ({ list: dashboards(), gone: settings().dashboardsGone || [] });
+const LOCAL_ONLY = ["on", "monitor"];   // je PC: welcher Bildschirm, ob das Fenster offen ist
+
+/**
+ * Dashboards eines anderen Geräts übernehmen: gleiche ID → deren Stand (Monitor/an bleiben von hier),
+ * neue kommen dazu, nur hier vorhandene bleiben, gelöschte (gone) fallen weg. Liefert true, wenn sich etwas ändert.
+ */
+export function adoptDashboards(p) {
+  if (!p || !Array.isArray(p.list)) return false;
+  const gone = [...new Set([...(settings().dashboardsGone || []), ...(Array.isArray(p.gone) ? p.gone : [])])].slice(-50);
+  const mine = new Map(dashboards().map((d) => [d.id, d]));
+  const out = [];
+  for (const d of p.list) {
+    if (!d?.id || !d.views || gone.includes(d.id) || out.some((x) => x.id === d.id)) continue;
+    const own = mine.get(d.id);
+    out.push({ ...structuredClone(d), ...Object.fromEntries(LOCAL_ONLY.map((k) => [k, own ? own[k] : k === "on" ? false : ""])) });
+  }
+  for (const d of dashboards()) if (!gone.includes(d.id) && !out.some((x) => x.id === d.id)) out.push(d);
+  const changed = JSON.stringify(out) !== JSON.stringify(dashboards());
+  if (JSON.stringify(gone) !== JSON.stringify(settings().dashboardsGone || [])) set("dashboardsGone", gone, { silent: true });
+  if (changed) replace("dashboards", out);
+  return changed;
+}
 export const updateDash = (id, patch) => mutate((list) => { const d = list.find((x) => x.id === id); if (d) Object.assign(d, patch); });
 
 /** Passt das Rechteck ins Raster, ohne andere Kacheln zu überdecken? */

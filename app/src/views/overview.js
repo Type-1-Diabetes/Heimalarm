@@ -28,6 +28,7 @@ import { statsEntries } from "../core/stats.js";
 import { checkup, runCheckup, statusKind, connectionFailed, failedNow, reconnectAll } from "../core/checkup.js";
 import { doSet as wifiToggle } from "./wifi.js";
 import { icon } from "../ui/icons.js";
+import { dashboards } from "../core/dashboard.js";
 
 const chip = (kind, text) => h("span.chip" + (kind ? "." + kind : ""), {}, text);
 
@@ -68,6 +69,15 @@ function updateBanner() {
     h("div.row", {},
       h("button.btn.primary.small", { onclick: installUpdate, disabled: update.installing }, update.installing ? "Lädt …" : "Installieren"),
       h("a.btn.small", { href: "#/einstellungen/updates" }, "Details")));
+}
+
+/** Handy: Einstieg ins Dashboard vom PC (nur wenn welche abgeglichen sind). */
+function boardLink() {
+  const list = dashboards();
+  return h("a.board-link", { href: "#/dashboard" },
+    h("span.ico", {}, icon("grid")),
+    h("span.board-link-t", {}, h("b", {}, "Dashboard"), h("small", {}, list.length === 1 ? list[0].name || "vom PC" : `${list.length} vom PC`)),
+    icon("chev"));
 }
 
 /** Zentrale oder ESP32 älter als diese App – mit Link auf die Update-Anleitung. */
@@ -391,6 +401,7 @@ export function overview() {
     stale.length > 0 && outdatedBanner(stale),
     needsSetup() && setupCard(),
     kpis(),
+    !hasPcFeatures && dashboards().length > 0 && boardLink(),
     h("div.home-cols" + (left ? "" : ".single"), {}, left, recentPanel()),
     h("div.home-more", {},
       has.diveraApi() && diveraCard(),

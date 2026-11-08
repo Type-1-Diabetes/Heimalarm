@@ -1,6 +1,6 @@
 # Dashboard (Alarmmonitor auf weiterem Monitor) – Plan
 
-Stand: 27.10.2026 · Status: gebaut (Editor, Dashboard-Fenster, alle Kacheln) – Test am echten Windows-PC und mit echtem Divera-Schlüssel offen
+Stand: 08.11.2026 · Status: gebaut (Editor, Dashboard-Fenster, alle Kacheln, Lesefenster, Handy) – Test am echten Windows-PC und mit echtem Divera-Schlüssel offen
 
 ## Entscheidungen
 
@@ -9,7 +9,7 @@ Stand: 27.10.2026 · Status: gebaut (Editor, Dashboard-Fenster, alle Kacheln) �
 | Wo läuft es? | Windows-App, auf einem weiteren Monitor am selben PC (kein Fernseher). Eigenes Vollbild-Fenster auf diesem Monitor |
 | Bedienen? | Anzeigen und minimal bedienen (z. B. „Mein Divera-Status“, Bereitschaft, Einsatz beenden) |
 | Bei Alarm | Eigene Alarm-Ansicht je Dashboard (wie Alarmmonitore: Ruhe- und Alarm-Perspektive), ebenfalls frei zusammengestellt. „Einsatz beenden“ oder Zeitablauf schaltet zurück |
-| Wie viele? | Mehrere Dashboards, jedes mit eigenem Raster |
+| Wie viele? | Mehrere Dashboards, jedes mit eigenem Raster. Auch am Handy (hoch/quer), siehe Erweiterung 08.11. |
 | Aufbau | Alles frei platzierbar, festes Raster 12 × 6, Größe je Kachel wählbar, keine feste Leiste |
 | Abstand | Schreibtisch, ca. 1 m |
 | Farbschema | Folgt der App (hell/dunkel) |
@@ -60,7 +60,7 @@ Offen: genaue Divera-Feldnamen prüfen (offizielle Doku war aus der Entwicklungs
 ## Bau-Log
 
 ### Schritt 1 – Datenmodell (`app/src/core/dashboard.js`)
-- Dashboards liegen in `settings.dashboards`, nur auf diesem PC (kein Abgleich mit dem Handy).
+- Dashboards liegen in `settings.dashboards` (seit 08.11. mit Handy und weiteren PCs abgeglichen, siehe unten).
 - Je Dashboard zwei Ansichten `ruhe` und `alarm`, Kacheln `{ id, type, x, y, w, h, opts }` im Raster 12 × 6.
 - Neues Dashboard startet mit dem Aufbau aus dem Mockup. Überlappen und Kacheln außerhalb des Rasters werden verhindert, jede Kachelart hat eine Mindestgröße.
 
@@ -110,3 +110,29 @@ Offen: genaue Divera-Feldnamen prüfen (offizielle Doku war aus der Entwicklungs
 
 ### Korrektur 27.10.
 - „Fernseher“ war gemeint als **weiterer Monitor am PC**. Texte angepasst, Mauszeiger wird nicht mehr ausgeblendet. Technik unverändert (war schon ein Fenster auf einem weiteren Monitor). Interne Namen (`tv.html`, `tv-*`) bleiben.
+
+### Erweiterung 08.11.2026 (v0.1.41) – Lesefenster und Dashboard am Handy
+Quelle: offizielle API-Beschreibung von `api.divera247.com` (Swagger: `docs/api_v2_news.yaml`, `api_v2_event.yaml`, `api_v2_alarm.yaml`, `api_v2_pull.yaml` …).
+
+**Lesefenster** (`ui/detail.js`, Stil in `styles/dashboard.css`)
+- Kacheln Mitteilungen, Termine, Nachrichten, Fahrzeuge, Divera-Einsätze, Einsatzdetails und Rückmeldungen haben oben rechts einen Knopf („Lesen“, „Öffnen“, „Details“, „Alle Namen“). Jeder Eintrag lässt sich auch direkt anklicken.
+- Links die Liste, rechts der ganze Eintrag. Am Handy schmal: erst Liste, dann Eintrag mit „Zurück“.
+- Mitteilung: ganzer Text, Autor, Ort, Umfragen mit Antwort-Knöpfen (`POST /api/v2/news/confirm/{id}`), wird beim Öffnen als gelesen gemeldet (`/news/read/{id}`), Reichweite (`/news/reach/{id}`).
+- Termin: Text, Zeit, Ort, Zusagen/Unsicher/Absagen (`POST /api/v2/events/confirm/{id}`, `{ Event: { participation } }`), Zahlen.
+- Einsatz: alle Felder, wer kommt/wer nicht (mit Namen), Reichweite (`/alarms/reach/{id}`).
+- Nachrichten: Verlauf je Kanal (nur lesen; Schreiben bleibt in der Divera-App).
+- Fahrzeug: FMS, Notiz, Besatzung (`crew` aus `/pull/vehicle-status`).
+- Anhänge werden nur gezählt („in der Divera-App öffnen“). Fahrzeug-Eigenschaften (`/using-vehicle-property`) brauchen einen System-Schlüssel – nicht eingebaut.
+- Monitor: Ebene über dem Raster, schließt nach 3 Minuten ohne Bedienung, mit Esc und bei Alarm (Alarm-Ansicht hat Vorrang).
+
+**Abgleich** (`core/dashboard.js` → `adoptDashboards`, `core/shared.js`, `core/sync.js`)
+- Dashboards gehen mit Zentrale über `heimalarm/config/shared` (`common.dashboards`), ohne Zentrale über den bestehenden Abgleich (Bereich „Dashboards“).
+- Zusammenführen nach ID: gleiche ID → neuerer Stand, neue kommen dazu, gelöschte stehen in `dashboardsGone` und kommen nicht zurück. „Bildschirm“ und „auf dem Bildschirm zeigen“ bleiben je PC.
+
+**Handy** (`views/board-phone.js`, Einstieg über „Start“ → Karte „Dashboard“)
+- Auswahl des Dashboards, Ausrichtung Auto / Hoch / Quer, Vollbild, Bildschirm bleibt an (Wake Lock, wenn die WebView es kann).
+- Hoch: Kacheln untereinander in Lesereihenfolge, volle Breite, Höhe nach Inhalt.
+- Quer: Raster 1:1 wie am Monitor. Hochkant gehalten wird es um 90° gedreht. Kachel antippen = groß.
+- Bedienbar wie am PC: Status setzen, Bereitschaft, Einsatz beenden, Routinen, Lesefenster. Daten holt das Handy selbst (eigener Divera-Schlüssel nötig).
+
+**Geprüft:** `vite build`, `oxlint` ohne Hinweise, Browser mit Beispieldaten (`?demo&divera`): Monitor 1920 × 1080 hell/dunkel mit allen Lesefenstern, Handy 412 × 915 hoch/quer/gedreht/Vollbild, Abgleich-Logik. **Offen:** mit echtem Divera-Schlüssel prüfen (Umfrage-Antwort, Termin-Rückmeldung, Reichweite, Crew-Format), Wake Lock in der Android-App.

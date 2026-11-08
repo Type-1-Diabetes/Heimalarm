@@ -9,6 +9,7 @@
 //   pc       PC-Einstellungen (ohne „Auch für“ und MAC – die gelten je PC)
 //   shared   Routinen, WLAN-Geräte, Personen, Voice Monkey … (nur wenn beide ohne Zentrale laufen)
 //   einsaetze  Einsatz-Logbuch – wird zusammengeführt (core/stats.js), nicht ersetzt
+//   dashboards Dashboards vom PC (fürs Handy) – zusammengeführt nach ID (core/dashboard.js), Monitor/an bleiben je PC
 // Divera-/aPager-Schlüssel, App-PIN und Gerätename bleiben immer auf dem Gerät.
 import { on, emit } from "./events.js";
 import { settings, set, replace, mode, SYNC_KEYS } from "./settings.js";
@@ -17,9 +18,10 @@ import { hasPcFeatures } from "./platform.js";
 import { statsEntries, mergeEinsaetze } from "./stats.js";
 import { ownLog, remoteLogs, mergeRemoteLogs } from "./log.js";
 import { platformName } from "./platform.js";
+import { adoptDashboards, dashSyncPayload } from "./dashboard.js";
 
 const TS_KEY = "heimalarm.sync.ts";
-const SECTIONS = ["betrieb", ...SYNC_KEYS, "pc", "shared"];
+const SECTIONS = ["betrieb", ...SYNC_KEYS, "pc", "shared", "dashboards"];
 const PC_LOCAL = ["alsoFor", "wolMac"];
 
 function loadTs() {
@@ -27,6 +29,8 @@ function loadTs() {
   try { t = JSON.parse(localStorage.getItem(TS_KEY) || "{}") || {}; } catch { /* leer */ }
   // Erster Start mit Abgleich: Der Stand des Handys gilt (1 schlägt 0), bis jemand etwas ändert.
   for (const s of SECTIONS) if (typeof t[s] !== "number") t[s] = hasPcFeatures ? 0 : 1;
+  // Dashboards entstehen am PC: hat er schon welche, gilt sein Stand (zusammengeführt wird ohnehin)
+  if (typeof t.dashboards !== "number" || (hasPcFeatures && t.dashboards === 0 && (settings().dashboards || []).length)) t.dashboards = hasPcFeatures && (settings().dashboards || []).length ? 2 : 0;
   return t;
 }
 const ts = loadTs();
@@ -44,6 +48,7 @@ function sectionOf(path) {
   const root = String(path).split(".")[0];
   if (root === "mode" || root === "broker") return "betrieb";
   if (root === "pc") return PC_LOCAL.includes(String(path).split(".")[1]) ? null : "pc";
+  if (root === "dashboards" || root === "dashboardsGone") return "dashboards";
   return SYNC_KEYS.includes(root) ? root : null;
 }
 
@@ -61,6 +66,7 @@ export function bundle() {
   const s = settings();
   const out = { ts: { ...ts }, mode: mode(), betrieb: { mode: mode(), broker: s.broker }, pc: strip(s.pc, PC_LOCAL) };
   for (const k of SYNC_KEYS) out[k] = s[k];
+  out.dashboards = dashSyncPayload();
   if (mode() === "direkt") out.shared = strip(shared(), ["common"]);
   if (settings().features?.logbuch) out.einsaetze = statsEntries();   // Einsatz-Logbuch: wird zusammengeführt, nicht ersetzt
   // Protokolle: eigenes + die schon bekannten anderer Geräte (das Handy reicht sie von PC zu PC weiter)
@@ -82,6 +88,8 @@ export function applyBundle(b) {
       replace("alarm", { ...b.alarm, me: settings().alarm.me });
     } else if (sec === "pc") {
       replace("pc", { ...b.pc, ...Object.fromEntries(PC_LOCAL.map((k) => [k, settings().pc[k]])) });
+    } else if (sec === "dashboards") {
+      adoptDashboards(b.dashboards);
     } else if (sec === "shared") {
       // Routinen usw. nur abgleichen, wenn hier auch ohne Zentrale gearbeitet wird (sonst kommen sie von der Zentrale)
       if (mode() !== "direkt" || b.mode !== "direkt") continue;
@@ -98,4 +106,4 @@ export function applyBundle(b) {
   return changed;
 }
 
-export const SYNC_LABELS = { betrieb: "Betriebsart", alarm: "Alarm", notify: "Meldungen", ui: "Darstellung", pc: "PC-Einstellungen", shared: "Routinen & Geräte", einsaetze: "Einsätze" };
+export const SYNC_LABELS = { betrieb: "Betriebsart", alarm: "Alarm", notify: "Meldungen", ui: "Darstellung", pc: "PC-Einstellungen", shared: "Routinen & Geräte", einsaetze: "Einsätze", dashboards: "Dashboards" };

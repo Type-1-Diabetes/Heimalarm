@@ -18,6 +18,7 @@ import { devicesView } from "./views/devices.js";
 import { routinesView } from "./views/routines.js";
 import { diagnoseView } from "./views/diagnose.js";
 import { dashboardView, dashDragging } from "./views/dashboard.js";
+import { phoneBoardView, phoneBoardLeave } from "./views/board-phone.js";
 import { wizardView, wizardKeys } from "./views/wizard.js";
 import { needsWizard, startWizard, refreshAndroid } from "./core/wizard.js";
 import { initAndroid } from "./core/android.js";
@@ -34,7 +35,7 @@ import { initTv } from "./core/tvlink.js";
 
 const routes = {
   uebersicht: overview, geraete: devicesView, routinen: routinesView,
-  einsaetze: einsaetzeView, protokoll: logView, dashboard: dashboardView, einstellungen: settingsView, diagnose: diagnoseView, einrichtung: wizardView,
+  einsaetze: einsaetzeView, protokoll: logView, dashboard: hasPcFeatures ? dashboardView : phoneBoardView, einstellungen: settingsView, diagnose: diagnoseView, einrichtung: wizardView,
 };
 const NAV_OF = { diagnose: "einstellungen", einrichtung: "einstellungen" };
 const view = document.getElementById("view");
@@ -50,7 +51,11 @@ function render() {
   const y = window.scrollY;
   // Einrichtung: am Handy Vollbild ohne Leiste unten, am PC Hauptmenü gedimmt
   document.body.classList.toggle("wizard-on", name === "einrichtung");
-  view.replaceChildren(routes[name](render));
+  if (name !== "dashboard") phoneBoardLeave();
+  document.body.classList.toggle("board-on", name === "dashboard" && !hasPcFeatures);
+  // Handy-Dashboard liefert immer dasselbe Element und zeichnet sich selbst neu (Scroll-Position, Lesefenster)
+  const next = routes[name](render);
+  if (view.firstChild !== next) view.replaceChildren(next);
   // Einstellungen kümmern sich selbst um die Scroll-Position (Liste und Seite bleiben stehen)
   const sub = anchor();
   if (name === "einstellungen") { /* views/settings.js */ }
@@ -59,6 +64,7 @@ function render() {
   // Geräte und Routinen gibt es nur mit Zentrale
   document.querySelectorAll('.nav-item[data-route="geraete"], .nav-item[data-route="routinen"]').forEach((a) => { a.hidden = !has.routines(); });
   document.querySelectorAll('.nav-item[data-route="einsaetze"]').forEach((a) => { a.hidden = !has.logbuch(); });
+  // Am Handy: Einstieg über „Start“ (Leiste unten ist voll); Seite selbst geht, sobald Dashboards da sind
   document.querySelectorAll('.nav-item[data-route="dashboard"]').forEach((a) => { a.hidden = !hasPcFeatures; });
   document.querySelectorAll(".nav-item").forEach((a) => {
     if (a.dataset.route === (NAV_OF[name] || name)) a.setAttribute("aria-current", "page");
@@ -159,7 +165,11 @@ on("sync-applied", (secs) => { if (secs.includes("betrieb")) connect(); render()
 initAndroid().catch((e) => log("warn", "Android-Funktionen nicht verfügbar", String(e)));
 initUpdates();
 // Nur im Entwicklungsmodus: Beispieldaten mit ?demo, um die Übersicht ohne Zentrale zu prüfen
-if (import.meta.env.DEV && location.search.includes("demo")) (await import("./dev/demo.js")).fillDemo(state);
+if (import.meta.env.DEV && location.search.includes("demo")) {
+  const demo = await import("./dev/demo.js");
+  demo.fillDemo(state);
+  if (location.search.includes("divera")) await demo.fillDiveraDemo();
+}
 // Erster Start: Einrichtung Schritt für Schritt (nicht beim versteckten Autostart-Start in den Infobereich)
 if (needsWizard() && !location.hash.startsWith("#/einrichtung")) {
   if (settings().wizard.step === 0) startWizard();

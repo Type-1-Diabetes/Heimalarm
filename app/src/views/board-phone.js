@@ -13,6 +13,7 @@ import { snapshot, act, alarmActive, boardUse } from "../core/board.js";
 import { renderBoard, renderTile, startTicker, W, H, PAD, GAP, CELL_W, CELL_H } from "../ui/tiles.js";
 import { mountDetail } from "../ui/detail.js";
 import { log } from "../core/log.js";
+import { boardMode } from "../core/android.js";
 
 const COLS_HOCH = 3;
 const el = h("div.pb");
@@ -39,8 +40,10 @@ function currentDash() {
   return list.find((d) => d.id === pref().id) || list[0] || null;
 }
 
-// ── Bildschirm anlassen (Wake Lock), Vollbild ─────────────────────────────────
+// ── Bildschirm anlassen, Vollbild ────────────────────────────────────────────
+// Android-App: nativ (Leisten ausblenden, FLAG_KEEP_SCREEN_ON). Browser: Wake Lock und Fullscreen-API.
 async function keepAwake(onOff) {
+  if (await boardMode(onOff && full(), onOff && pref().awake)) return;
   try {
     if (onOff && !wake && pref().awake && "wakeLock" in navigator && !document.hidden) {
       wake = await navigator.wakeLock.request("screen");
@@ -52,6 +55,8 @@ document.addEventListener("visibilitychange", () => { if (active && !document.hi
 
 async function setFull(onOff) {
   document.body.classList.toggle("board-full", onOff);
+  if (onOff) showExit(); else exitBtn.remove();
+  if (await boardMode(onOff, active && pref().awake)) { paint(); return; }
   try {
     if (onOff && !document.fullscreenElement) await document.documentElement.requestFullscreen?.({ navigationUI: "hide" });
     if (!onOff && document.fullscreenElement) await document.exitFullscreen?.();
@@ -59,6 +64,18 @@ async function setFull(onOff) {
   paint();
 }
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && full()) { document.body.classList.remove("board-full"); paint(); } });
+
+// „Vollbild aus“: kleiner runder Knopf in der Ecke, blendet sich nach 3 s aus. Antippen irgendwo holt ihn zurück.
+const exitBtn = h("button.pb-exit", { type: "button", "aria-label": "Vollbild beenden", title: "Vollbild beenden", onclick: () => setFull(false) }, icon("x"));
+let exitTimer = 0;
+function showExit() {
+  if (!full()) return;
+  if (!exitBtn.isConnected) el.append(exitBtn);
+  exitBtn.classList.remove("dim");
+  clearTimeout(exitTimer);
+  exitTimer = setTimeout(() => exitBtn.classList.add("dim"), 3000);
+}
+el.addEventListener("pointerdown", () => { if (full()) showExit(); }, true);
 
 // ── Zeichnen ────────────────────────────────────────────────────────────────
 /**
@@ -89,7 +106,7 @@ function zoomed(snap) {
   const board = h("div.dash-board.pb-zoom", { "data-theme": snap.theme,
     style: `width:${w}px;height:${hh}px;grid-template-columns:repeat(${t.w},minmax(0,1fr));grid-template-rows:repeat(${t.h},minmax(0,1fr));transform:scale(${k})` },
   renderTile({ ...t, x: 0, y: 0 }, snap, host));
-  return h("div.pz", { "data-theme": snap.theme, role: "dialog", "aria-modal": "true", "aria-label": "Kachel groß" },
+  return h(`div.pz${zoomLayer.querySelector(":scope > .pz") ? ".still" : ""}`, { "data-theme": snap.theme, role: "dialog", "aria-modal": "true", "aria-label": "Kachel groß" },
     h("div.pz-scrim", { onclick: () => { zoom = null; paint(); } }),
     h("div.pz-box", { style: `width:${w * k}px;height:${hh * k}px` }, board),
     h("button.pb-fab", { type: "button", onclick: () => { zoom = null; paint(); } }, icon("x"), "Schließen"));
@@ -144,21 +161,25 @@ function paint() {
   stage.replaceChildren(scaler);
   if (!el.contains(stage)) el.replaceChildren(toolbar(dash, list), stage, layer, zoomLayer);
   else el.querySelector(".pb-bar")?.replaceWith(toolbar(dash, list));
-  stage.querySelector(".pb-exit")?.remove();
-  if (full()) stage.append(h("button.pb-fab.pb-exit", { type: "button", onclick: () => setFull(false) }, icon("x"), "Vollbild aus"));
   el.dataset.view = view;
+  el.classList.toggle("rot", o === "quer" && portraitDevice());
 
   // Größe: Hoch = Breite füllen, Quer = ganz hineinpassen (gedreht, wenn das Handy hochkant ist)
   requestAnimationFrame(() => {
     const r = stage.getBoundingClientRect();
+    // Innenabstand der Bühne = Abstand zu Status-/Navigationsleiste (nur im Vollbild gesetzt)
+    const cs = getComputedStyle(stage), px = (k) => parseFloat(cs[k]) || 0;
+    const inner = { w: r.width - px("paddingLeft") - px("paddingRight"), top: px("paddingTop"), bottom: px("paddingBottom") };
     if (o === "hoch") {
-      const k = r.width / board.offsetWidth;
+      const k = inner.w / board.offsetWidth;
       scaler.style.cssText = `height:${board.offsetHeight * k}px;--tf:scale(${k})`;
     } else {
       // Platz bis zur Leiste unten (Handy) bzw. bis zum Fensterrand
       const nav = document.querySelector(".nav")?.getBoundingClientRect();
       const bottom = !full() && nav && nav.top > innerHeight / 2 ? innerHeight - nav.top : 0;
-      const avail = { w: r.width, h: Math.max(200, innerHeight - Math.max(0, r.top) - bottom - (full() ? 0 : 12)) };
+      const avail = full()
+        ? { w: inner.w, h: innerHeight - inner.top - inner.bottom }
+        : { w: inner.w, h: Math.max(200, innerHeight - Math.max(0, r.top) - bottom - 12) };
       const rot = portraitDevice();
       const k = rot ? Math.min(avail.h / W, avail.w / H) : Math.min(avail.w / W, avail.h / H);
       scaler.style.cssText = rot

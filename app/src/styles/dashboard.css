@@ -345,7 +345,10 @@
 @keyframes ds-fade { from { opacity: 0; } }
 @keyframes ds-rise { from { opacity: 0; transform: translateY(18px) scale(.985); } }
 @media (prefers-reduced-motion: reduce) { .ds-scrim, .ds-panel { animation: none; } }
+<<<<<<< HEAD
 .ds.still .ds-scrim, .ds.still .ds-panel, .pz.still .pz-scrim, .pz.still .pz-box { animation: none; }
+=======
+>>>>>>> origin/main
 
 .ds-head { display: flex; align-items: center; gap: .55em; padding: .8em 1.1em .8em 1.3em; background: var(--surface); box-shadow: 0 1px 0 var(--line-2); min-width: 0; }
 .ds-head .ico { width: 1.6em; height: 1.6em; border-radius: .45em; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--a) 16%, transparent); color: var(--a); }

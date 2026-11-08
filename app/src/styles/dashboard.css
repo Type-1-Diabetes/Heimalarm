@@ -341,7 +341,7 @@
 .ds-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 72%, transparent); animation: ds-fade .18s ease-out; }
 .ds-panel { position: relative; width: 1560px; height: 960px; display: grid; grid-template-rows: auto minmax(0, 1fr); border-radius: 20px; overflow: hidden;
   background: var(--surface); box-shadow: 0 24px 64px rgb(0 0 0 / .45), 0 2px 8px rgb(0 0 0 / .2); animation: ds-rise .26s cubic-bezier(.16, 1, .3, 1); }
-.ds.phone .ds-panel { width: 100%; height: 100%; border-radius: 0; padding: var(--safe-top) 0 var(--safe-bottom); box-shadow: none; }
+.ds.phone .ds-panel { width: 100%; height: 100%; border-radius: 0; padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left); box-shadow: none; box-sizing: border-box; }
 @keyframes ds-fade { from { opacity: 0; } }
 @keyframes ds-rise { from { opacity: 0; transform: translateY(18px) scale(.985); } }
 @media (prefers-reduced-motion: reduce) { .ds-scrim, .ds-panel { animation: none; } }
@@ -460,7 +460,7 @@
 .board-link > .icon { width: 20px; height: 20px; color: var(--text-2); }
 .board-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
-.pb { display: grid; gap: var(--s3); padding: var(--s3) var(--s4) var(--s4); min-width: 0; }
+.pb { display: grid; gap: var(--s3); padding: var(--s3) max(var(--s4), var(--safe-right)) var(--s4) var(--s4); min-width: 0; }
 .pb-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2) var(--s3); padding-top: var(--safe-top); }
 .pb-title { display: flex; align-items: baseline; gap: var(--s3); min-width: 0; }
 .pb-title h1 { margin: 0; font-size: var(--fs-xl); font-weight: 760; font-variation-settings: "wdth" 88; }
@@ -490,18 +490,29 @@
   background: color-mix(in srgb, var(--surface-3) 92%, transparent); color: var(--text); font: 650 var(--fs-sm) var(--font); box-shadow: 0 6px 20px rgb(0 0 0 / .35); }
 .pb-fab .icon { width: 20px; height: 20px; }
 .pb-fab:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-.pb-exit { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); top: calc(var(--safe-top) + 8px); z-index: 40; opacity: .82; }
+/* Vollbild beenden: runder Knopf in der Ecke (innerhalb der Leisten-Abstände), nach 3 s ausgeblendet */
+.pb-exit { position: fixed; right: calc(var(--safe-right) + 10px); top: calc(var(--safe-top) + 10px); z-index: 40; width: 48px; height: 48px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 50%; background: color-mix(in srgb, var(--surface-3) 88%, transparent); color: var(--text); box-shadow: 0 4px 16px rgb(0 0 0 / .35);
+  transition: opacity .3s ease-out, transform .3s cubic-bezier(.16, 1, .3, 1); }
+.pb-exit .icon { width: 22px; height: 22px; }
+.pb-exit.dim { opacity: 0; transform: scale(.85); pointer-events: none; }
+.pb-exit:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; opacity: 1; transform: none; pointer-events: auto; }
+/* Hochkant gehalten, quer gedreht: oben rechts im Bild = unten rechts am Gerät */
+.pb.rot .pb-exit { top: auto; bottom: calc(var(--safe-bottom) + 10px); }
+@media (prefers-reduced-motion: reduce) { .pb-exit { transition: opacity .2s linear; } .pb-exit.dim { transform: none; } }
 
 /* Vollbild: App-Leiste und Kopf weg, Raster füllt den Bildschirm */
 body.board-full .nav, body.board-full .pb-bar { display: none !important; }
 body.board-full .shell { grid-template-columns: minmax(0, 1fr); }
 body.board-full .main { padding: 0 !important; }
 body.board-full .pb { padding: 0; gap: 0; }
-body.board-full .pb-stage { min-height: 100dvh; place-items: center; background: var(--bg); }
+body.board-full .pb-stage { min-height: 100dvh; box-sizing: border-box; place-items: center; background: var(--bg);
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left); }
 body.board-full .pb-scale { border-radius: 0; }
 
 /* Eine Kachel groß */
-.pz { position: fixed; inset: 0; z-index: 45; display: grid; place-items: center; align-content: center; gap: 16px; padding: var(--safe-top) 16px var(--safe-bottom); }
+.pz { position: fixed; inset: 0; z-index: 45; display: grid; place-items: center; align-content: center; gap: 16px;
+  padding: var(--safe-top) calc(var(--safe-right) + 16px) var(--safe-bottom) calc(var(--safe-left) + 16px); }
 .pz-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 82%, transparent); animation: ds-fade .16s ease-out; }
 .pz-box { position: relative; animation: ds-rise .22s cubic-bezier(.16, 1, .3, 1); }
 .pz-box > .dash-board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: transparent; padding: 24px; }

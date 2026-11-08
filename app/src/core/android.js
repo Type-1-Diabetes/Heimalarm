@@ -142,6 +142,12 @@ export async function setBackgroundService(on) {
   set("android.service", on);
 }
 
+/** Dashboard am Handy: Leisten ausblenden (full) und Bildschirm anlassen (awake). Nur in der Android-App. */
+export async function boardMode(full, awake) {
+  if (!isAndroid || !isTauri) return false;
+  try { await call("set_board_mode", { full: Boolean(full), awake: Boolean(awake) }); return true; } catch { return false; }
+}
+
 /** Abstand zu Status- und Navigationsleiste übernehmen. Die Werte kommen vom Fenster;
  *  beim Start sind sie oft noch 0, daher mehrmals nachfragen und bei Größenänderung erneut. */
 async function syncInsets() {
@@ -150,6 +156,8 @@ async function syncInsets() {
     const root = document.documentElement.style;
     if (st.insetTop) root.setProperty("--inset-top", `${st.insetTop}px`);
     if (st.insetBottom) root.setProperty("--inset-bottom", `${st.insetBottom}px`);
+    root.setProperty("--inset-left", `${st.insetLeft || 0}px`);
+    root.setProperty("--inset-right", `${st.insetRight || 0}px`);
     return Boolean(st.insetTop && st.insetBottom);
   } catch { return false; }
 }

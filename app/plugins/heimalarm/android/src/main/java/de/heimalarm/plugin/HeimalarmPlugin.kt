@@ -9,8 +9,11 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.webkit.WebView
+import android.view.WindowManager
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.result.ActivityResult
 import app.tauri.annotation.ActivityCallback
 import app.tauri.annotation.Command
@@ -24,6 +27,12 @@ import app.tauri.plugin.Plugin
 class UpdateArgs {
     var url: String = ""
     var shaUrl: String = ""
+}
+
+@InvokeArg
+class BoardModeArgs {
+    var full: Boolean = false
+    var awake: Boolean = false
 }
 
 @InvokeArg
@@ -115,6 +124,8 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
     // Abstand zu Status- und Navigationsleiste in CSS-Pixeln (Android-WebView liefert env(safe-area-inset-*) oft als 0)
     private var insetTop = 0
     private var insetBottom = 0
+    private var insetLeft = 0     // quer: Navigationsleiste bzw. Kamera-Aussparung an der Seite
+    private var insetRight = 0
 
     /** Läuft die App (WebView) noch? Sonst puffert der Listener Alarme. */
     fun alive(): Boolean = !activity.isFinishing && !activity.isDestroyed
@@ -129,6 +140,8 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
             val d = activity.resources.displayMetrics.density
             insetTop = Math.round(bars.top / d)
             insetBottom = Math.round(bars.bottom / d)
+            insetLeft = Math.round(bars.left / d)
+            insetRight = Math.round(bars.right / d)
             applyInsets(webView)
             insets
         }
@@ -147,7 +160,9 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
 
     private fun applyInsets(webView: WebView) {
         val js = "document.documentElement.style.setProperty('--inset-top','${insetTop}px');" +
-            "document.documentElement.style.setProperty('--inset-bottom','${insetBottom}px');"
+            "document.documentElement.style.setProperty('--inset-bottom','${insetBottom}px');" +
+            "document.documentElement.style.setProperty('--inset-left','${insetLeft}px');" +
+            "document.documentElement.style.setProperty('--inset-right','${insetRight}px');"
         webView.post { webView.evaluateJavascript(js, null) }
     }
 
@@ -196,6 +211,8 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
         ret.put("service", KeepAliveService.running)
         ret.put("insetTop", insetTop)
         ret.put("insetBottom", insetBottom)
+        ret.put("insetLeft", insetLeft)
+        ret.put("insetRight", insetRight)
         val nm = activity.getSystemService(android.app.NotificationManager::class.java)
         ret.put("fullScreenAllowed", Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent())
         ret.put("overlayAllowed", PhoneActions.canOverlay(activity))
@@ -239,6 +256,27 @@ class HeimalarmPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun backgroundDone(invoke: Invoke) {
         BgSync.done()
+        invoke.resolve(JSObject())
+    }
+
+    /**
+     * Dashboard am Handy: full = Status- und Navigationsleiste ausblenden (kommen per Wischen vom Rand kurz zurück),
+     * awake = Bildschirm bleibt an, solange das Dashboard offen ist.
+     */
+    @Command
+    fun setBoardMode(invoke: Invoke) {
+        val args = invoke.parseArgs(BoardModeArgs::class.java)
+        activity.runOnUiThread {
+            val c = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+            if (args.full) {
+                c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                c.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                c.show(WindowInsetsCompat.Type.systemBars())
+            }
+            if (args.awake) activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            else activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
         invoke.resolve(JSObject())
     }
 

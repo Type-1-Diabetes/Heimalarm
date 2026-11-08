@@ -33,6 +33,7 @@ Alle Heimalarm-Android-Befehle erlauben
 - `allow-open-app-details`
 - `allow-background-sync`
 - `allow-background-done`
+- `allow-set-board-mode`
 
 ## Permission Table
 
@@ -611,6 +612,32 @@ Enables the set_alarm_volume command without any pre-configured scope.
 <td>
 
 Denies the set_alarm_volume command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-set-board-mode`
+
+</td>
+<td>
+
+Enables the set_board_mode command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-set-board-mode`
+
+</td>
+<td>
+
+Denies the set_board_mode command without any pre-configured scope.
 
 </td>
 </tr>

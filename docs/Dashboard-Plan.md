@@ -136,3 +136,9 @@ Quelle: offizielle API-Beschreibung von `api.divera247.com` (Swagger: `docs/api_
 - Bedienbar wie am PC: Status setzen, Bereitschaft, Einsatz beenden, Routinen, Lesefenster. Daten holt das Handy selbst (eigener Divera-Schlüssel nötig).
 
 **Geprüft:** `vite build`, `oxlint` ohne Hinweise, Browser mit Beispieldaten (`?demo&divera`): Monitor 1920 × 1080 hell/dunkel mit allen Lesefenstern, Handy 412 × 915 hoch/quer/gedreht/Vollbild, Abgleich-Logik. **Offen:** mit echtem Divera-Schlüssel prüfen (Umfrage-Antwort, Termin-Rückmeldung, Reichweite, Crew-Format), Wake Lock in der Android-App.
+
+### Korrektur 08.11.2026 (v0.1.42) – Handy-Vollbild
+- Lesefenster flackerte nach dem Öffnen (gelesen/Reichweite/Abruf zeichneten neu und spielten die Einblendung jedes Mal ab). Jetzt nur beim ersten Öffnen (`.still`).
+- Vollbild in der Android-App ist echtes Vollbild: Plugin-Befehl `set_board_mode { full, awake }` blendet Status- und Navigationsleiste aus (per Wischen kurz zurück) und hält den Bildschirm an (`FLAG_KEEP_SCREEN_ON`). Im Browser weiter Fullscreen-API und Wake Lock.
+- Abstände zu den Leisten jetzt auch links/rechts (`--inset-left/right` → `--safe-left/right`), quer liegt die Navigationsleiste seitlich.
+- „Vollbild aus“ ist ein runder Knopf in der Ecke und blendet sich nach 3 s aus; Antippen irgendwo holt ihn zurück. Gedreht (hochkant gehalten, quer angezeigt) unten rechts.

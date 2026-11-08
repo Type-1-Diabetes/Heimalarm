@@ -89,7 +89,7 @@ function zoomed(snap) {
   const board = h("div.dash-board.pb-zoom", { "data-theme": snap.theme,
     style: `width:${w}px;height:${hh}px;grid-template-columns:repeat(${t.w},minmax(0,1fr));grid-template-rows:repeat(${t.h},minmax(0,1fr));transform:scale(${k})` },
   renderTile({ ...t, x: 0, y: 0 }, snap, host));
-  return h("div.pz", { "data-theme": snap.theme, role: "dialog", "aria-modal": "true", "aria-label": "Kachel groß" },
+  return h(`div.pz${zoomLayer.querySelector(":scope > .pz") ? ".still" : ""}`, { "data-theme": snap.theme, role: "dialog", "aria-modal": "true", "aria-label": "Kachel groß" },
     h("div.pz-scrim", { onclick: () => { zoom = null; paint(); } }),
     h("div.pz-box", { style: `width:${w * k}px;height:${hh * k}px` }, board),
     h("button.pb-fab", { type: "button", onclick: () => { zoom = null; paint(); } }, icon("x"), "Schließen"));

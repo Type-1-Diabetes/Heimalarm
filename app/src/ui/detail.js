@@ -199,7 +199,9 @@ export function mountDetail(layer, st, snap, host, { phone = false } = {}) {
     h("header.ds-head", {}, h("span.ico", {}, icon(k.icon)), h("h2", {}, k.label), items.length > 1 && h("span.src", {}, String(items.length)),
       h("button.ds-x", { type: "button", onclick: () => host.close(), "aria-label": "Schließen" }, h("span", {}, "Schließen"), icon("x"))),
     h(`div.ds-body${showList && showMain ? "" : ".one"}`, {}, list, main));
-  layer.replaceChildren(h(`div.ds${phone ? ".phone" : ".tv"}`, { "data-theme": snap.theme }, h("div.ds-scrim", { onclick: () => host.close() }), panel));
+  // Einblenden nur beim ersten Öffnen – neue Daten (gelesen, Reichweite, Abruf) zeichnen ohne Animation neu
+  const still = layer.querySelector(":scope > .ds") ? ".still" : "";
+  layer.replaceChildren(h(`div.ds${phone ? ".phone" : ".tv"}${still}`, { "data-theme": snap.theme }, h("div.ds-scrim", { onclick: () => host.close() }), panel));
 
   const m = layer.querySelector(".ds-main");
   if (m && sameItem && scroll != null) m.scrollTop = scroll;

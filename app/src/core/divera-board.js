@@ -27,7 +27,11 @@ const ms = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
 const geo = (lat, lng) => (num(lat) && num(lng) ? { lat: Number(lat), lng: Number(lng) } : null);
 /** Text aus Divera kann HTML enthalten (Mitteilungen, Chat). */
-const plain = (v) => str(v).replace(/<br\s*\/?>/giu, "\n").replace(/<[^>]+>/gu, " ").replace(/&nbsp;/gu, " ").replace(/[ \t]+/gu, " ").trim();
+const plain = (v) => str(v).replace(/<br\s*\/?>/giu, "\n").replace(/<\/(p|div|li|h\d)>/giu, "\n").replace(/<[^>]+>/gu, " ")
+  .replace(/&nbsp;/gu, " ").replace(/&amp;/gu, "&").replace(/&lt;/gu, "<").replace(/&gt;/gu, ">").replace(/&quot;/gu, '"')
+  .replace(/[ \t]+/gu, " ").replace(/ *\n */gu, "\n").replace(/\n{3,}/gu, "\n\n").trim();
+/** Liste von IDs (Array oder Objekt mit IDs als Schlüssel). */
+const ids = (v) => (Array.isArray(v) ? v.map((x) => String(typeof x === "object" && x ? x.id ?? x.ucr_id ?? x.ucr ?? "" : x)) : Object.keys(obj(v))).filter(Boolean);
 
 /** Liste in Divera-Reihenfolge: items + sorting. */
 function ordered(block) {
@@ -128,16 +132,46 @@ function myStatusOf(d, statusNames, statusRaw, vehicleNames, now) {
 }
 
 /** Letzte Chat-Nachrichten aus allen Kanälen, neueste zuerst. */
-function messagesOf(d, consumers) {
+function messagesOf(d, consumers, mine) {
   const channels = obj(obj(d.message_channel).items);
   return Object.values(obj(obj(d.message).items))
     .filter((m) => !m.deleted && !m.hidden && str(m.text))
     .map((m) => ({
       id: m.id, text: plain(m.text), ts: ms(m.ts_create), author: personName(consumers, m.author_id) || "",
-      channel: str(obj(channels[m.message_channel_id]).title), attachments: num(m.attachment_count) || 0,
+      channelId: String(m.message_channel_id ?? ""), channel: str(obj(channels[m.message_channel_id]).title),
+      attachments: num(m.attachment_count) || 0, own: mine.has(String(m.author_id)),
     }))
     .toSorted((a, b) => b.ts - a.ts)
-    .slice(0, 20);
+    .slice(0, 80);
+}
+
+/** Chat-Kanäle mit Titel und Zahl der Nachrichten (fürs Lesefenster). */
+function channelsOf(d, messages) {
+  const raw = obj(obj(d.message_channel).items);
+  const out = Object.values(raw).filter((c) => !c.deleted && !c.archived).map((c) => ({
+    id: String(c.id), title: str(c.title) || "Kanal", count: messages.filter((m) => m.channelId === String(c.id)).length,
+    last: messages.find((m) => m.channelId === String(c.id))?.ts || 0,
+  }));
+  return out.toSorted((a, b) => b.last - a.last);
+}
+
+/** Umfragen einer Mitteilung mit Antworten, Anzahl und eigener Wahl. */
+function surveysOf(n, mine) {
+  return arr(n.surveys).filter((sv) => sv && typeof sv === "object").map((sv) => {
+    const raw = obj(sv);
+    const list = arr(raw.answers).filter((a) => a && typeof a === "object");
+    const order = arr(raw.answerSorting).map(String);
+    const answers = list.map((a) => ({
+      id: String(a.id), title: str(a.title) || "Antwort", count: num(a.answeredcount),
+      mine: ids(a.answeredlist).some((u) => mine.has(u)),
+    })).toSorted((a, b) => (order.length ? order.indexOf(a.id) - order.indexOf(b.id) : 0));
+    const notes = list.flatMap((a) => arr(a.custom_answers)).filter(Boolean).map((c) => ({ ucr: String(obj(c).id ?? ""), note: str(obj(c).note), ts: ms(obj(c).ts) })).filter((c) => c.note);
+    return {
+      id: String(raw.id ?? ""), title: str(raw.title) || "Umfrage", multiple: Boolean(raw.multiple_answers), custom: Boolean(raw.custom_answers),
+      until: raw.response_until ? ms(raw.ts_response) : 0, showCount: raw.access_count !== false, answers,
+      myNote: notes.find((c) => mine.has(c.ucr))?.note || "",
+    };
+  });
 }
 
 /** Alles, was die Dashboard-Kacheln aus Divera brauchen. `extra` = optionale Antworten weiterer Endpunkte. */
@@ -148,6 +182,8 @@ export function parseBoard(pull, alarms = null, extra = {}) {
   const statusNames = Object.fromEntries(Object.entries(statusRaw).map(([id, s]) => [id, obj(s).name || obj(s).shortname || `Status ${id}`]));
   const consumers = obj(c.consumer);
   const now = Date.now();
+  // Eigene Mitgliedschaft(en) in der Einheit: Schlüssel von d.ucr (UserClusterRelation)
+  const mine = new Set(Object.keys(obj(d.ucr)));
 
   // Verfügbarkeit: je Status die Anzahl (monitor["1"] = anonym, für die ganze Einheit)
   const mon = obj(d.monitor);
@@ -165,6 +201,7 @@ export function parseBoard(pull, alarms = null, extra = {}) {
   // Fahrzeuge: aus pull/all, genauer (Zeitpunkt, Notiz, Position) aus /pull/vehicle-status
   const fmsText = obj(obj(c.fms_status).items);
   const vStatus = Object.fromEntries(arr(extra.vehicles).map((v) => [String(v.id), v]));
+  const crewOf = (v) => ids(obj(vStatus[String(v.id)]).crew ?? v.crew).map((u) => personName(consumers, u)).filter(Boolean);
   const vehicles = Object.values(obj(c.vehicle)).map((v) => {
     const live = obj(vStatus[String(v.id)]);
     const fms = live.fmsstatus ?? v.fmsstatus ?? v.fmsstatus_id;
@@ -172,11 +209,12 @@ export function parseBoard(pull, alarms = null, extra = {}) {
       id: String(v.id ?? ""), name: v.shortname || v.name || "Fahrzeug", full: v.name || "",
       fms: fms != null ? String(fms) : "", fmsText: obj(fmsText[v.fmsstatus_id]).name || str(live.fmsstatus_note) || v.fmsstatus_note || "",
       since: ms(live.fmsstatus_ts ?? v.fmsstatus_ts), place: geo(live.lat ?? v.lat, live.lng ?? v.lng),
+      note: str(live.fmsstatus_note ?? v.fmsstatus_note), crew: crewOf(v),
     };
   });
   for (const v of arr(extra.vehicles)) {
     if (vehicles.some((x) => x.id === String(v.id))) continue;
-    vehicles.push({ id: String(v.id ?? ""), name: v.shortname || v.name || "Fahrzeug", full: v.fullname || v.name || "", fms: v.fmsstatus != null ? String(v.fmsstatus) : "", fmsText: str(v.fmsstatus_note), since: ms(v.fmsstatus_ts), place: geo(v.lat, v.lng) });
+    vehicles.push({ id: String(v.id ?? ""), name: v.shortname || v.name || "Fahrzeug", full: v.fullname || v.name || "", fms: v.fmsstatus != null ? String(v.fmsstatus) : "", fmsText: str(v.fmsstatus_note), since: ms(v.fmsstatus_ts), place: geo(v.lat, v.lng), note: str(v.fmsstatus_note), crew: crewOf(v) });
   }
   const vehicleNames = Object.fromEntries(vehicles.map((v) => [v.id, v.name]));
 
@@ -184,7 +222,10 @@ export function parseBoard(pull, alarms = null, extra = {}) {
     .map((e) => {
       const pc = obj(e.participationcount);
       return {
-        title: e.title || "Termin", start: ms(e.start), end: ms(e.end), place: e.address || "", fullday: Boolean(e.fullday),
+        id: e.id, title: e.title || "Termin", text: plain(e.text), author: personName(consumers, e.author_id) || "",
+        start: ms(e.start), end: ms(e.end), place: e.address || "", fullday: Boolean(e.fullday),
+        type: num(e.response_type) ?? 2, note: str(e.note), isNew: Boolean(e.new),
+        read: num(e.count_read), recipients: num(e.count_recipients), attachments: num(e.attachment_count) || 0,
         mine: num(e.participation) || 0,   // 1 = Ja, 2 = Unsicher, 3 = Nein, 0 = keine Rückmeldung
         yes: num(pc["1"]) ?? null, maybe: num(pc["2"]) ?? null, no: num(pc["3"]) ?? null,
         answerable: Boolean(e.answerable), until: ms(e.ts_response),
@@ -194,10 +235,12 @@ export function parseBoard(pull, alarms = null, extra = {}) {
     .toSorted((a, b) => a.start - b.start);
 
   const news = ordered(d.news)
+    .filter((n) => !n.deleted && !n.hidden)
     .map((n) => ({
-      title: n.title || "Mitteilung", text: plain(n.text), ts: ms(n.date || n.ts_create),
-      survey: Boolean(n.survey) || arr(n.surveys).length > 0, isNew: Boolean(n.new),
-      read: num(n.count_read), recipients: num(n.count_recipients),
+      id: n.id, title: n.title || "Mitteilung", text: plain(n.text), ts: ms(n.date || n.ts_create),
+      author: personName(consumers, n.author_id) || "", place: str(n.address),
+      survey: Boolean(n.survey) || arr(n.surveys).length > 0, surveys: surveysOf(n, mine), isNew: Boolean(n.new),
+      read: num(n.count_read), recipients: num(n.count_recipients), attachments: num(n.attachment_count) || 0,
     }))
     .toSorted((a, b) => b.ts - a.ts);
 
@@ -221,6 +264,8 @@ export function parseBoard(pull, alarms = null, extra = {}) {
     newMessages: Object.values(obj(d.ucr)).reduce((n, u) => n + (Number(obj(u).new_messages) || 0), 0),
   };
 
+  const messages = messagesOf(d, consumers, mine);
+
   const shifts = arr(extra.shifts)
     .map((s) => ({ id: s.id, name: str(s.name) || "Dienstplan", start: ms(s.ts_start), end: ms(s.ts_end) }))
     .filter((s) => !s.end || s.end >= now)
@@ -234,7 +279,8 @@ export function parseBoard(pull, alarms = null, extra = {}) {
     statuses, availability, qualifications, qualByStatus,
     people: peopleByStatus(mon, consumers, statuses.map((s) => s.id)),
     vehicles, events, news, alarm, alarms: history.slice(0, 12),
-    messages: messagesOf(d, consumers),
+    messages,
+    channels: channelsOf(d, messages),
     shifts, shiftsLoaded: Array.isArray(extra.shifts), vehiclesLive: Array.isArray(extra.vehicles),
     at: now,
   };

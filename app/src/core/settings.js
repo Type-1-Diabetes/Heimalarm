@@ -140,9 +140,12 @@ export const defaults = {
   },
   // Zusatzfunktionen – bewusst aus, bis man sie einschaltet
   features: { logbuch: false, stats: false },
-  // TV-Dashboards (nur dieser PC): [{ id, name, monitor, on, alarmSwitch, backMin, views: { ruhe: [Kachel], alarm: [Kachel] } }]
+  // TV-Dashboards (am PC gebaut, abgeglichen mit Handy/PCs – Monitor und „an“ je PC): [{ id, name, monitor, on, alarmSwitch, backMin, views: { ruhe: [Kachel], alarm: [Kachel] } }]
   // Kachel: { id, type, x, y, w, h, opts } im Raster 12 × 6 (x, y ab 0). core/dashboard.js
   dashboards: [],
+  dashboardsGone: [],   // IDs gelöschter Dashboards, damit der Abgleich sie nicht zurückholt
+  // Dashboard am Handy (nur dieses Gerät): gewähltes Dashboard, Ausrichtung auto | hoch | quer, Bildschirm anlassen
+  phoneBoard: { id: "", orient: "auto", awake: true },
   // Einrichtungs-Assistent (nur dieses Gerät): Fortschritt, Antworten, von Hand abgehakte Schritte. core/wizard.js
   wizard: { done: false, step: 0, answers: { src: [], act: [], always: "nein" }, ok: {} },
 };

@@ -4,6 +4,8 @@
 // `common` enthält die synchronisierten allgemeinen Einstellungen (SYNC_KEYS) für Handy und PC.
 import { emit, on } from "./events.js";
 import { settings, replace, SYNC_KEYS, mode } from "./settings.js";
+import { adoptDashboards, dashSyncPayload } from "./dashboard.js";
+import { hasPcFeatures } from "./platform.js";
 
 const TOPIC = "heimalarm/config/shared";
 
@@ -51,6 +53,13 @@ export function receive(msg) {
         : k === "pc" ? { ...data.common[k], alsoFor: settings().pc.alsoFor, wolMac: settings().pc.wolMac } : data.common[k];
       if (JSON.stringify(incoming) !== JSON.stringify(settings()[k])) replace(k, incoming);
     }
+    // Dashboards (gebaut am PC, angezeigt auch am Handy): zusammenführen, nicht ersetzen
+    if (data.common.dashboards) adoptDashboards(data.common.dashboards);
+  }
+  // PC mit Dashboards, die auf der Zentrale noch fehlen (z. B. erste Verbindung nach dem Update): einmal verteilen
+  if (settings().sync.enabled && hasPcFeatures && mode() === "zentrale") {
+    const known = new Set((data.common?.dashboards?.list || []).map((d) => d.id));
+    if ((settings().dashboards || []).some((d) => !known.has(d.id))) setTimeout(publishCommon, 0);
   }
   emit("shared", data);
 }
@@ -76,13 +85,20 @@ on("settings", ({ path, silent }) => {
   if (silent || !settings().sync.enabled || !loaded) return;
   const root = path.split(".")[0];
   // PC-Einstellungen gelten für alle PCs gleich – außer „Auch für“ und MAC (je PC)
-  if (!SYNC_KEYS.includes(root) && !(root === "pc" && !/^pc\.(alsoFor|wolMac)/u.test(path))) return;
+  const dash = root === "dashboards" || root === "dashboardsGone";
+  if (!dash && !SYNC_KEYS.includes(root) && !(root === "pc" && !/^pc\.(alsoFor|wolMac)/u.test(path))) return;
+  publishCommon();
+});
+
+/** Allgemeine Einstellungen + Dashboards an alle Geräte (über die Zentrale). */
+function publishCommon() {
   const common = {};
   for (const k of SYNC_KEYS) common[k] = settings()[k];
   const { alsoFor: _a, wolMac: _w, ...pc } = settings().pc || {};
   common.pc = pc;
+  common.dashboards = dashSyncPayload();
   updateShared({ common });
-});
+}
 
 export const newId = () => Math.random().toString(36).slice(2, 9);
 /** Geheimer Schlüssel (Webhooks): 128 Bit aus dem sicheren Zufallsgenerator, 32 Hex-Zeichen. */

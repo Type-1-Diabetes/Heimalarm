@@ -7,6 +7,10 @@
 //   POST /api/v2/alarms/confirm/{id}          Rückmeldung zu einem Einsatz { Status: { id, note } }
 //   GET  /api/v2/pull/vehicle-status          Fahrzeuge mit FMS-Status, Zeitpunkt, Notiz, Position (nur fürs Dashboard)
 //   GET  /api/v2/shift-plans                  Dienstpläne (nur fürs Dashboard, nicht jede Einheit hat sie)
+//   POST /api/v2/{news|events|alarms}/read/{id}   als gelesen markieren (Lesefenster im Dashboard)
+//   POST /api/v2/news/confirm/{id}            Umfrage beantworten { NewsSurvey: { id, note }, NewsSurveyAnswer: { id, checked, custom_answer } }
+//   POST /api/v2/events/confirm/{id}          Termin-Rückmeldung { Event: { participation: 1 Ja | 2 Unsicher | 3 Nein, custom_answer } }
+//   GET  /api/v2/{alarms|news|events}/reach/{id}  Reichweite { received, viewed, confirmed } (Lesefenster)
 // In der App läuft der Abruf über das Tauri-HTTP-Plugin (kein CORS-Problem).
 import { pickDetails } from "./stats.js";
 import { settings, set } from "./settings.js";
@@ -240,4 +244,50 @@ export function boardPolling(sec) {
   if (!sec || !settings().divera.key) return;
   refreshBoard();
   boardTimer = setInterval(refreshBoard, Math.max(10, sec) * 1000);
+}
+
+// ── Lesefenster im Dashboard: gelesen, Umfrage, Termin-Rückmeldung, Reichweite ──
+const KIND_PATH = { news: "news", event: "events", alarm: "alarms" };
+/** Reichweite je „art:id“: { received, viewed, confirmed, at } oder { error }. */
+divera.reach = {};
+
+/** Als gelesen markieren. Fehler nur ins Protokoll (nicht jeder Schlüssel darf das). */
+export async function markDiveraRead(kind, id) {
+  if (!KIND_PATH[kind] || !id || !settings().divera.key) return false;
+  try { await api(`/api/v2/${KIND_PATH[kind]}/read/${encodeURIComponent(id)}`, {}); return true; }
+  catch (e) { log("info", `Divera: als gelesen markieren ging nicht: ${e.message}`, e.detail || ""); return false; }
+}
+
+/** Antwort in einer Umfrage einer Mitteilung an- oder abwählen, optional mit Freitext. */
+export async function answerDiveraSurvey(newsId, surveyId, answerId, checked = true, note = "") {
+  if (!newsId || !surveyId || !settings().divera.key) return false;
+  const custom = answerId === "custom";
+  const body = { NewsSurvey: { id: Number(surveyId), ...(note ? { note } : {}) }, NewsSurveyAnswer: { id: custom ? 0 : Number(answerId), checked: Boolean(checked), custom_answer: custom } };
+  try {
+    await api(`/api/v2/news/confirm/${encodeURIComponent(newsId)}`, body);
+    log("action", "Divera: Umfrage beantwortet");
+    return true;
+  } catch (e) { log("warn", `Divera-Umfrage nicht beantwortet: ${e.message}`, e.detail || ""); return false; }
+}
+
+/** Zu- oder Absage zu einem Termin (1 = Ja, 2 = Unsicher, 3 = Nein). */
+export async function answerDiveraEvent(eventId, participation, note = "") {
+  if (!eventId || ![1, 2, 3].includes(Number(participation)) || !settings().divera.key) return false;
+  try {
+    await api(`/api/v2/events/confirm/${encodeURIComponent(eventId)}`, { Event: { participation: Number(participation), ...(note ? { custom_answer: note } : {}) } });
+    log("action", `Divera-Termin: ${{ 1: "zugesagt", 2: "unsicher", 3: "abgesagt" }[participation]}`);
+    return true;
+  } catch (e) { log("warn", `Divera-Termin-Rückmeldung fehlgeschlagen: ${e.message}`, e.detail || ""); return false; }
+}
+
+const count = (v) => (Array.isArray(v) ? v.length : v && typeof v === "object" ? Object.keys(v).length : Number(v) || 0);
+/** Reichweite laden (empfangen, gelesen, beantwortet) – nur auf Wunsch im Lesefenster. */
+export async function loadDiveraReach(kind, id) {
+  if (!KIND_PATH[kind] || !id || !settings().divera.key) return;
+  const key = `${kind}:${id}`;
+  try {
+    const r = await api(`/api/v2/${KIND_PATH[kind]}/reach/${encodeURIComponent(id)}`);
+    divera.reach[key] = { received: count(r?.received), viewed: count(r?.viewed), confirmed: count(r?.confirmed), at: Date.now() };
+  } catch (e) { divera.reach[key] = { error: e.message, at: Date.now() }; }
+  emit("divera", divera);
 }

@@ -46,6 +46,16 @@ const color = (t) => `var(${t.opts?.accent || TILES[t.type]?.color || GROUPS[TIL
 const head = (t, title, extra) => t.opts?.header === false ? null
   : h("div.th", {}, h("span.ico", {}, icon(TILES[t.type].icon)), h("span.ell", {}, t.opts?.title || title || TILES[t.type].label), extra && h("span.src", {}, extra));
 const empty = (text) => h("p.dash-empty", {}, text);
+/** Kopfzeile mit Knopf, der das Lesefenster öffnet (ui/detail.js). Ohne ctx.open (Editor) nur angedeutet. */
+const headOpen = (t, ctx, kind, label = "Lesen", title, extra, id) => {
+  const th = head(t, title, extra);
+  if (!th) return null;
+  th.append(h("button.th-open", { type: "button", "data-open": kind, onclick: () => ctx?.open?.({ kind, id }), tabindex: ctx?.open ? null : "-1" }, label, icon("chev")));
+  return th;
+};
+/** Eintrag, der beim Antippen den Eintrag im Lesefenster öffnet. */
+const opener = (ctx, kind, id) => (ctx?.open ? { role: "button", tabindex: "0", "data-open": kind, onclick: () => ctx.open({ kind, id }),
+  onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ctx.open({ kind, id }); } } } : {});
 const dot = (kind) => h("span.dot", { style: `--d:var(--${kind === "ok" ? "ok" : kind === "warn" ? "warn" : kind === "bad" ? "signal" : "surface-3"})` });
 const btn = (label, onClick, extra = {}) => h("button.dbtn", { type: "button", onclick: onClick, ...extra }, label);
 
@@ -185,13 +195,13 @@ const R = {
         () => ctx.act({ type: "divera-status", id: st.id }), { class: d.current === st.id ? "on" : "", style: `--b:${st.color || "var(--ok)"}`, "aria-pressed": String(d.current === st.id) })))];
   },
 
-  answers(t, s) {
+  answers(t, s, ctx) {
     const b = s.divera?.board;
     if (!s.divera) return [head(t), empty("Divera ist nicht eingerichtet.")];
     const ans = b?.alarm?.answers;
     if (!ans) return [head(t), empty(s.alarm ? "Noch keine Rückmeldungen von Divera." : "Bei einem Divera-Alarm siehst du hier, wer kommt.")];
     const rows = Math.min(fitRows(t, 47) - 3, t.opts?.max || Infinity);   // 3 Zeilen für die Zusammenfassung oben
-    return [head(t),
+    return [b.alarm.preview ? head(t) : headOpen(t, ctx, "alarm", "Alle Namen", "", "", b.alarm.id),
       h("div.rm-sum", {},
         h("div", { style: "--x:var(--ok)" }, h("b", {}, String(ans.coming.length)), h("span", {}, "kommen")),
         h("div", { style: "--x:var(--signal)" }, h("b", {}, String(ans.declined.length)), h("span", {}, "kommen nicht")),
@@ -212,36 +222,36 @@ const R = {
       t.h < 2 && h("div.sub", {}, av.slice(0, 3).map((x) => `${x.count} ${x.name}`).join(" · "))];
   },
 
-  vehicles(t, s) {
+  vehicles(t, s, ctx) {
     const v = s.divera?.board?.vehicles;
     if (!s.divera) return [head(t), empty("Divera ist nicht eingerichtet.")];
     if (!v?.length) return [head(t), empty("Keine Fahrzeuge in Divera.")];
-    return [head(t), h("ul.rows", {}, v.slice(0, lim(t, 59)).map((x) => h("li", {},
+    return [headOpen(t, ctx, "vehicle", "Details"), h("ul.rows", {}, v.slice(0, lim(t, 59)).map((x) => h("li.open", opener(ctx, "vehicle", x.id),
       h("span.fms", { style: `--f:var(--${fmsColor(x.fms)}-soft);--fc:var(--${fmsColor(x.fms)})` }, x.fms || "–"),
       h("b.ell", {}, x.name),
       (x.fmsText || (x.since > 0 && on(t, "since"))) && h("span.r", {}, [x.fmsText, x.since > 0 && on(t, "since") && h("span.mono", {}, ` ${x.fmsText ? "· " : ""}${hm(x.since)}`)]))))];
   },
 
-  events(t, s) {
+  events(t, s, ctx) {
     const ev = s.divera?.board?.events;
     if (!s.divera) return [head(t), empty("Divera ist nicht eingerichtet.")];
     if (!ev?.length) return [head(t), empty("Keine anstehenden Termine.")];
-    return [head(t), h("ul.rows", {}, ev.slice(0, lim(t, 87)).map((e) => h("li", {},
+    return [headOpen(t, ctx, "event", "Öffnen"), h("ul.rows", {}, ev.slice(0, lim(t, 87)).map((e) => h("li.open", opener(ctx, "event", e.id),
       h("span.date", {}, h("b", {}, pad(new Date(e.start).getDate())), h("span", {}, dayShort(e.start))),
       h("div.ev.ell", {}, h("b.ell", {}, e.title), h("span.ell", {}, [e.fullday ? "ganztägig" : hm(e.start), e.place, on(t, "answers") && e.yes != null && `${e.yes} zugesagt`].filter(Boolean).join(" · "))),
       on(t, "answers") && (e.mine || e.answerable) && h("span.part", { style: `--p:var(--${PART[e.mine][1]})` }, PART[e.mine][0]))))];
   },
 
-  news(t, s) {
+  news(t, s, ctx) {
     const n = s.divera?.board?.news;
     if (!s.divera) return [head(t), empty("Divera ist nicht eingerichtet.")];
     if (!n?.length) return [head(t), empty("Keine Mitteilungen.")];
-    return [head(t), h("div.news", {}, n.slice(0, Math.min(Math.max(1, Math.floor(t.h * 1.1)), t.opts?.max || Infinity)).map((x) => h("article", {},
+    return [headOpen(t, ctx, "news"), h("div.news", {}, n.slice(0, Math.min(Math.max(1, Math.floor(t.h * 1.1)), t.opts?.max || Infinity)).map((x) => h("article.open", opener(ctx, "news", x.id),
       h("h3.ell", {}, x.isNew && h("span.new", { "aria-label": "neu" }), x.title), h("p", {}, x.text.replace(/<[^>]+>/g, " ")),
       (x.ts || x.survey) && h("time", {}, [x.ts && dateText(x.ts), x.survey && "Umfrage", on(t, "read") && x.recipients ? `${x.read ?? 0}/${x.recipients} gelesen` : ""].filter(Boolean).join(" · ")))))];
   },
 
-  diveraDetails(t, s) {
+  diveraDetails(t, s, ctx) {
     if (!s.divera) return [head(t), empty(NO_DIVERA)];
     const a = s.divera.board?.alarm;
     if (!a) return [head(t), empty(s.alarm ? "Zu diesem Alarm hat Divera keine Details." : "Bei einem Divera-Einsatz stehen hier Objekt, Melder, Hinweise, Einsatzmittel und Fahrtziel.")];
@@ -256,7 +266,7 @@ const R = {
       a.attachments ? `${a.attachments} ${a.attachments === 1 ? "Anhang" : "Anhänge"}` : "",
       a.myAnswer ? `Du: ${a.myAnswer}` : "",
     ].filter(Boolean);
-    return [head(t, "", a.preview ? "Beispiel" : a.number ? `Nr. ${a.number}` : ""),
+    return [a.preview ? head(t, "", "Beispiel") : headOpen(t, ctx, "alarm", "Alles", "", a.number ? `Nr. ${a.number}` : "", a.id),
       (a.priority || a.closed) && h("div.tags", {}, a.priority && h("span.tag.sig", {}, "Sonderrechte"), a.closed && h("span.tag", {}, "beendet")),
       rows.length ? h("dl.facts", {}, rows.flatMap(([k, v]) => [h("dt", {}, k), h("dd", {}, v)]))
         : empty("Divera hat zu diesem Einsatz nur Stichwort und Adresse."),
@@ -280,12 +290,12 @@ const R = {
       h("div.map-attr", {}, "© OpenStreetMap-Mitwirkende")];
   },
 
-  diveraAlarms(t, s) {
+  diveraAlarms(t, s, ctx) {
     if (!s.divera) return [head(t), empty(NO_DIVERA)];
     const list = (s.divera.board?.alarms || []).filter((a) => on(t, "closed") || !a.closed);
     if (!s.divera.board) return [head(t), empty(LOADING)];
     if (!list.length) return [head(t), empty("Keine Einsätze in Divera.")];
-    return [head(t), h("ul.rows", {}, list.slice(0, lim(t, 74)).map((a) => h("li", {},
+    return [headOpen(t, ctx, "alarm", "Öffnen"), h("ul.rows", {}, list.slice(0, lim(t, 74)).map((a) => h("li.open", opener(ctx, "alarm", a.id),
       dot(a.closed ? "none" : "bad"),
       h("div.ev.ell", {}, h("b.ell", {}, a.title || "Einsatz"), h("span.ell", {}, [dateText(a.ts), a.address].filter(Boolean).join(" · "))),
       t.w >= 3 && h("span.r.mono", {}, a.answers.coming.length ? `${a.answers.coming.length} kommen` : a.closed ? "beendet" : ""))))];
@@ -353,12 +363,12 @@ const R = {
         h("div" + (q.n ? "" : ".zero"), { title: q.name }, h("b", {}, String(q.n)), h("span.ell", {}, q.short || q.name))))];
   },
 
-  chat(t, s) {
+  chat(t, s, ctx) {
     if (!s.divera) return [head(t), empty(NO_DIVERA)];
     const m = s.divera.board?.messages;
     if (!m) return [head(t), empty(LOADING)];
     if (!m.length) return [head(t), empty("Keine Nachrichten in Divera.")];
-    return [head(t), h("div.news.chat", {}, m.slice(0, Math.min(Math.max(1, Math.floor(t.h * 1.4)), t.opts?.max || Infinity)).map((x) => h("article", {},
+    return [headOpen(t, ctx, "chat"), h("div.news.chat", {}, m.slice(0, Math.min(Math.max(1, Math.floor(t.h * 1.4)), t.opts?.max || Infinity)).map((x) => h("article.open", opener(ctx, "chat", x.channelId),
       h("div.chat-h", {}, h("b.ell", {}, x.author || "Mitglied"), x.channel && on(t, "channel") && t.w >= 3 && h("span.ell", {}, x.channel), x.ts > 0 && h("time", {}, dateText(x.ts))),
       h("p", {}, x.text))))];
   },
@@ -448,4 +458,4 @@ export function startTicker(root) {
   return setInterval(tick, 1000);
 }
 
-export { CELL_W, CELL_H };
+export { CELL_W, CELL_H, hm, whenText, dateText, dayDate, fmsColor, PART, color as tileColor };

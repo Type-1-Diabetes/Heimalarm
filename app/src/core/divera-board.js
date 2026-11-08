@@ -157,15 +157,15 @@ function channelsOf(d, messages) {
 
 /** Umfragen einer Mitteilung mit Antworten, Anzahl und eigener Wahl. */
 function surveysOf(n, mine) {
-  return arr(n.surveys).map((sv) => {
+  return arr(n.surveys).filter((sv) => sv && typeof sv === "object").map((sv) => {
     const raw = obj(sv);
-    const list = arr(raw.answers);
+    const list = arr(raw.answers).filter((a) => a && typeof a === "object");
     const order = arr(raw.answerSorting).map(String);
     const answers = list.map((a) => ({
       id: String(a.id), title: str(a.title) || "Antwort", count: num(a.answeredcount),
       mine: ids(a.answeredlist).some((u) => mine.has(u)),
     })).toSorted((a, b) => (order.length ? order.indexOf(a.id) - order.indexOf(b.id) : 0));
-    const notes = list.flatMap((a) => arr(a.custom_answers)).map((c) => ({ ucr: String(obj(c).id ?? ""), note: str(obj(c).note), ts: ms(obj(c).ts) })).filter((c) => c.note);
+    const notes = list.flatMap((a) => arr(a.custom_answers)).filter(Boolean).map((c) => ({ ucr: String(obj(c).id ?? ""), note: str(obj(c).note), ts: ms(obj(c).ts) })).filter((c) => c.note);
     return {
       id: String(raw.id ?? ""), title: str(raw.title) || "Umfrage", multiple: Boolean(raw.multiple_answers), custom: Boolean(raw.custom_answers),
       until: raw.response_until ? ms(raw.ts_response) : 0, showCount: raw.access_count !== false, answers,

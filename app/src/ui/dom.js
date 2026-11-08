@@ -20,13 +20,14 @@ export function h(tag, props = {}, ...children) {
 // Uhrzeit als Textfeld mit Zifferntastatur: Das native Zeitfeld öffnet in der Android-App
 // weder Tastatur noch Zeitwähler. "2215" wird zu "22:15"; unfertige Eingaben erreichen die
 // eigenen input/change-Handler nicht (dieser Listener läuft als erster).
+const normTime = (raw) => {
+  const d = raw.replace(/\D/g, "").slice(0, 4);
+  return d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d;
+};
+const validTime = (v) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
 function timeField(el) {
   Object.assign(el, { type: "text", inputMode: "numeric", maxLength: 5, placeholder: "HH:MM", autocomplete: "off" });
-  const norm = (raw) => {
-    const d = raw.replace(/\D/g, "").slice(0, 4);
-    return d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d;
-  };
-  const valid = (v) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+  const norm = normTime, valid = validTime;
   el.addEventListener("input", (e) => {
     if (!e.inputType?.startsWith("delete")) el.value = norm(el.value);
     if (!valid(el.value)) e.stopImmediatePropagation();

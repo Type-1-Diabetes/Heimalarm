@@ -31,6 +31,8 @@ Alle Heimalarm-Android-Befehle erlauben
 - `allow-open-overlay-settings`
 - `allow-open-dnd-settings`
 - `allow-open-app-details`
+- `allow-background-sync`
+- `allow-background-done`
 
 ## Permission Table
 
@@ -63,6 +65,58 @@ Enables the alarm_volume command without any pre-configured scope.
 <td>
 
 Denies the alarm_volume command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-background-done`
+
+</td>
+<td>
+
+Enables the background_done command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-background-done`
+
+</td>
+<td>
+
+Denies the background_done command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:allow-background-sync`
+
+</td>
+<td>
+
+Enables the background_sync command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`heimalarm:deny-background-sync`
+
+</td>
+<td>
+
+Denies the background_sync command without any pre-configured scope.
 
 </td>
 </tr>
